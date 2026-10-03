@@ -55,8 +55,6 @@ test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.deepEqual(site.ext.playUrlMatch, [
         'https://vdownload.hembed.com/*.mp4*',
         'https://vdownload.hembed.com/*.m3u8*',
-        'https://cdn.dreamserve.dev/video/*.mp4*',
-        'https://cdn.dreamserve.dev/video/*.m3u8*',
     ]);
     for (const entry of Object.values(site.ext.spider)) {
         assert.match(entry.loadUrl, /^https:\/\/hanime1\.me\//);

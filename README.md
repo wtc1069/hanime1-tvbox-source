@@ -8,7 +8,7 @@ https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/box.json
 
 本规则只请求 `https://hanime1.me`，不使用镜像或回退地址。原站从验证环境返回 HTTP 403，因此目前**无法验证原站的列表、详情和播放**；如果你的设备也被拦截，分类仍会为空。视频地址可能由站点签名且会过期，播放失败时请重新打开详情页获取新地址。请仅在有权访问相关内容的情况下使用。
 
-`Hanime1 原站 (JS)` 使用 GM/WebView 版规则，适合有 Cloudflare 验证的设备环境。它与 Python 版并存，复用 App 的通用验证机制：遇到验证页会打开同域网页，验证完成后重试原请求。播放页由 GM 捕获网页播放器已解析的真实媒体请求；扩展会保留 Cookie、Referer 和 User-Agent，但删除 `Range`/`If-Range`，避免外部播放器从 MP4 中段开始解析。这个修复适用于所有采用 GM 网络匹配播放的站点，并不依赖跨域 `PerformanceResourceTiming`。它只请求 `hanime1.me`，不使用镜像。需要使用包含通用验证功能的定制 TVBox；旧版 App 无法处理验证标记。
+`Hanime1 原站 (JS)` 使用 GM/WebView 版规则，适合有 Cloudflare 验证的设备环境。它与 Python 版并存，复用 App 的通用验证机制：遇到验证页会打开同域网页，验证完成后重试原请求。播放页由 GM 捕获网页播放器已解析的真实媒体请求；Hanime1 只匹配原站播放器使用的 `vdownload.hembed.com`，不匹配广告使用的 `cdn.dreamserve.dev`。扩展会保留 Cookie、Referer 和 User-Agent，但删除 `Range`/`If-Range`，避免外部播放器从 MP4 中段开始解析。这个修复适用于所有采用 GM 网络匹配播放的站点，并不依赖跨域 `PerformanceResourceTiming`。它只请求 `hanime1.me`，不使用镜像。需要使用包含通用验证功能的定制 TVBox；旧版 App 无法处理验证标记。
 
 MissAV 基于 [cluntop/tvbox 的 GM/WebView 规则](https://github.com/cluntop/tvbox)；本站只访问 `https://missav.ws/`。`vendor/cluntop/` 保存上游 MIT 许可的 `gm.jar` 和修改后的 `missav.user.js`，并托管 jQuery 3.7.1 slim 及其 MIT 许可文件；配置不再依赖 clun.top 的运行文件。上游版本为 `f94c8994b0ce0b6bdad8cd1d2a9b5ac54f677f87`。定制脚本兼容旧版 WebView（不用 `Array.at()`），详情页等待播放器提供 HLS 地址，超时不返回预告链接。JAR 是会在 App 内执行的第三方代码；旧的 `missav_direct.py` 仅保留供回退。MissAV 的实际播放仍需设备实测。
 
