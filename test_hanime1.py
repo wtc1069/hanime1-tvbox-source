@@ -1,6 +1,9 @@
 import sys
 import types
 import unittest
+import json
+from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 base = types.ModuleType('base')
@@ -138,6 +141,32 @@ class SpiderTests(unittest.TestCase):
         self.assertEqual(parser.videos, [{
             'vod_id': '456', 'vod_name': 'Fallback title', 'vod_pic': '/cover.jpg', 'vod_remarks': ''
         }])
+
+    def test_first_page_reuses_parsed_home_result(self):
+        self.spider.homeVideoContent()
+        self.spider.categoryContent('裏番', '1', False, {})
+        self.assertEqual(len(self.urls), 1)
+
+    def test_config_busts_cached_python_script(self):
+        sites = json.loads(Path(__file__).with_name('box.json').read_text(encoding='utf-8'))['sites']
+        python_site = next(site for site in sites if site['key'] == 'hanime1_direct.py')
+        self.assertIn('/hanime1_direct.py?v=', python_site['api'])
+
+    def test_watch_cache_expires_and_does_not_store_challenge(self):
+        with patch('hanime1_direct.monotonic', return_value=100):
+            self.spider.detailContent(['123'])
+            self.spider.detailContent(['123'])
+        self.assertEqual(len(self.urls), 1)
+        with patch('hanime1_direct.monotonic', return_value=121):
+            self.spider.detailContent(['123'])
+        self.assertEqual(len(self.urls), 2)
+
+        self.spider.fetch = lambda url, headers: types.SimpleNamespace(text='''
+            <title>Just a moment...</title><div id="cf-challenge-running"></div>
+        ''')
+        self.spider.detailContent(['456'])
+        self.spider.detailContent(['456'])
+        self.assertNotIn(('/watch', (('v', '456'),)), self.spider._pages)
 
 
 if __name__ == '__main__':

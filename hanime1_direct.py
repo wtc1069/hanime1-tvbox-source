@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from html.parser import HTMLParser
+from collections import OrderedDict
+from time import monotonic
 from urllib.parse import parse_qs, urlencode, urlparse
 import sys
 
@@ -193,6 +195,7 @@ class Spider(BaseSpider):
             'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
             'Referer': HOST + '/',
         }
+        self._pages = OrderedDict()
 
     def getName(self):
         return 'Hanime1'
@@ -201,6 +204,15 @@ class Spider(BaseSpider):
         url = HOST + path
         if params:
             url += '?' + urlencode(params)
+        key = (path, tuple(sorted((name, value) for name, value in (params or {}).items()
+                                   if not (path == '/search' and name == 'page' and str(value) == '1'))))
+        now = monotonic()
+        cached = self._pages.get(key)
+        if cached and cached[0] > now:
+            self._pages.move_to_end(key)
+            return cached[1]
+        if cached:
+            del self._pages[key]
         response = self.fetch(url, headers=self.headers)
         parser = PageParser()
         parser.feed(response.text)
@@ -208,6 +220,13 @@ class Spider(BaseSpider):
             playlist = PlaylistParser()
             playlist.feed(response.text)
             parser.playlist = playlist.entries
+        # Never cache challenge/error/empty pages. Signed watch URLs have a shorter lifetime.
+        valid = parser.metadata.get('og:title') if path == '/watch' else parser.videos
+        if getattr(response, 'status_code', 200) == 200 and valid:
+            self._pages[key] = (monotonic() + (20 if path == '/watch' else 45), parser)
+            self._pages.move_to_end(key)
+            if len(self._pages) > 12:
+                self._pages.popitem(last=False)
         return parser
 
     @staticmethod

@@ -20,6 +20,8 @@ MissAV 分类或详情碰到 Cloudflare 验证时，脚本会返回验证标记�
 
 分类页支持排序筛选，并兼容原站 `video-item-container` 卡片的标题和时长字段；排行榜不附加分类参数。
 
+Python 版会在内存中短时复用正常的列表与详情页解析结果（列表 45 秒、详情 20 秒），第一页分类和首页共享结果；验证页、空页及请求错误不会进入缓存。新版 App 的隐藏 WebView 在视频 DOM 已就绪时可提前返回，不必等待广告等其它子资源加载完毕；其它页面仍按原有就绪条件处理。
+
 在 TVBox 中重新加载上述配置，选择所需的站点。Hanime1 当前搜索使用 `裏番` 分类；若仍显示旧站点列表，可清除该配置缓存后再次导入。
 
 Hanime1 规则参考了 [cluntop/tvbox 的 Hanime Python 实现](https://github.com/cluntop/tvbox/blob/main/py/Hanime.py)和 [bizhangjie/CatVodSpider](https://github.com/bizhangjie/CatVodSpider/blob/main/app/src/main/java/com/github/catvod/spider/Hanime.java) 的分类方式；Hanime1 不依赖其他站点的 JAR 或播放前缀。
