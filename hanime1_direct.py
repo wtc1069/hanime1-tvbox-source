@@ -8,13 +8,14 @@ from base.spider import Spider as BaseSpider
 
 
 HOST = 'https://hanime1.me'
-GENRES = ('裏番', '泡麵番', 'Motion Anime', '3D動畫', '同人作品', 'Cosplay')
+GENRES = ('裏番', '泡麵番', 'Motion Anime', '3D動畫', '3DCG', '2D動畫', 'AI生成', 'MMD', '同人作品', 'Cosplay')
 RANKS = {
     'latest': '最新上市',
     'daily': '本日排行',
     'weekly': '本週排行',
     'monthly': '本月排行',
 }
+SORTS = ('最新上市', '最新上傳', '本日排行', '本週排行', '本月排行', '觀看次數')
 
 
 def watch_id(href):
@@ -103,11 +104,20 @@ class PageParser(HTMLParser):
         self.playlist = []
         self.card = None
         self.depth = 0
+        self.div_depth = 0
+        self.container_depth = None
         self.title_depth = None
+        self.duration_depth = None
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         classes = attrs.get('class', '').split()
+        if tag == 'div':
+            self.div_depth += 1
+            if 'video-item-container' in classes and self.card is None:
+                self.container_depth = self.div_depth
+                self.card = {'vod_id': '', 'vod_name': '', 'vod_pic': '', 'vod_remarks': '',
+                             'fallback_name': ''}
         if tag == 'meta' and attrs.get('property') in ('og:title', 'og:image', 'og:description'):
             self.metadata[attrs['property']] = attrs.get('content', '')
         if tag == 'source' and attrs.get('type') == 'video/mp4' and attrs.get('src'):
@@ -115,43 +125,66 @@ class PageParser(HTMLParser):
         if tag == 'a' and attrs.get('rel') == 'next':
             self.next_page = True
         if tag == 'a' and self.card is None:
-            query = parse_qs(urlparse(attrs.get('href', '')).query)
-            vid = query.get('v', [''])[0]
-            if '/watch' in attrs.get('href', '') and vid.isdigit():
-                self.card = {'vod_id': vid, 'vod_name': '', 'vod_pic': '', 'fallback_name': attrs.get('title', '')}
+            vid = watch_id(attrs.get('href', ''))
+            if vid:
+                self.card = {'vod_id': vid, 'vod_name': '', 'vod_pic': '', 'vod_remarks': '',
+                             'fallback_name': attrs.get('title', '')}
                 self.depth = 1
                 return
         if self.card is not None:
-            if tag == 'a':
+            if tag == 'a' and self.container_depth is not None:
+                self.card['vod_id'] = self.card['vod_id'] or watch_id(attrs.get('href', ''))
+                self.card['fallback_name'] = self.card['fallback_name'] or attrs.get('title', '')
+            elif tag == 'a':
                 self.depth += 1
             if tag == 'img' and not self.card['vod_pic']:
                 self.card['vod_pic'] = attrs.get('src', '') or attrs.get('data-src', '') or attrs.get('data-original', '')
                 self.card['fallback_name'] = self.card['fallback_name'] or attrs.get('alt', '')
-            if 'home-rows-videos-title' in classes or 'card-mobile-title' in classes:
+            if ('home-rows-videos-title' in classes or 'card-mobile-title' in classes
+                    or 'title' in classes or 'video-title' in classes):
                 self.title_depth = 1
             elif self.title_depth is not None and tag not in ('img', 'br', 'source'):
                 self.title_depth += 1
+            if 'duration' in classes:
+                self.duration_depth = 1
+            elif self.duration_depth is not None and tag not in ('img', 'br', 'source'):
+                self.duration_depth += 1
 
     def handle_data(self, data):
         if self.card is not None and self.title_depth is not None:
             self.card['vod_name'] += data
+        if self.card is not None and self.duration_depth is not None:
+            self.card['vod_remarks'] += data
 
     def handle_endtag(self, tag):
-        if self.card is None:
-            return
-        if self.title_depth is not None and tag not in ('img', 'br', 'source'):
-            self.title_depth -= 1
-            if self.title_depth == 0:
-                self.title_depth = None
-        if tag == 'a':
-            self.depth -= 1
-            if self.depth == 0:
-                self.card['vod_name'] = (self.card['vod_name'].strip() or self.card['fallback_name']).strip()
-                if self.card['vod_name']:
-                    del self.card['fallback_name']
-                    self.videos.append(self.card)
-                self.card = None
-                self.title_depth = None
+        if self.card is not None:
+            if self.title_depth is not None and tag not in ('img', 'br', 'source'):
+                self.title_depth -= 1
+                if self.title_depth == 0:
+                    self.title_depth = None
+            if self.duration_depth is not None and tag not in ('img', 'br', 'source'):
+                self.duration_depth -= 1
+                if self.duration_depth == 0:
+                    self.duration_depth = None
+            if tag == 'a' and self.container_depth is None:
+                self.depth -= 1
+                if self.depth == 0:
+                    self._finish_card()
+            elif tag == 'div' and self.container_depth == self.div_depth:
+                self._finish_card()
+                self.container_depth = None
+        if tag == 'div':
+            self.div_depth = max(0, self.div_depth - 1)
+
+    def _finish_card(self):
+        self.card['vod_name'] = (self.card['vod_name'].strip() or self.card['fallback_name']).strip()
+        self.card['vod_remarks'] = self.card['vod_remarks'].strip()
+        if self.card['vod_id'] and self.card['vod_name']:
+            del self.card['fallback_name']
+            self.videos.append(self.card)
+        self.card = None
+        self.title_depth = None
+        self.duration_depth = None
 
 
 class Spider(BaseSpider):
@@ -186,18 +219,24 @@ class Spider(BaseSpider):
         classes = [{'type_name': name, 'type_id': name} for name in GENRES]
         classes = [{'type_name': '最新上市', 'type_id': 'latest'}] + classes
         classes += [{'type_name': label, 'type_id': key} for key, label in RANKS.items() if key != 'latest']
-        return {'class': classes}
+        filters = {name: [{'key': 'sort', 'name': '排序', 'value': [
+            {'n': sort, 'v': sort} for sort in SORTS
+        ]}] for name in GENRES}
+        return {'class': classes, 'filters': filters}
 
     def homeVideoContent(self):
         return {'list': self._page('/search', {'genre': GENRES[0], 'sort': RANKS['latest']}).videos}
 
     def categoryContent(self, tid, pg, filter, extend):
         page = max(1, int(pg or '1'))
-        params = {'page': page, 'genre': GENRES[0], 'sort': RANKS['latest']}
+        params = {'page': page, 'sort': RANKS['latest']}
         if tid in RANKS:
             params['sort'] = RANKS[tid]
         elif tid in GENRES:
             params['genre'] = tid
+            chosen_sort = (extend or {}).get('sort')
+            if chosen_sort in SORTS:
+                params['sort'] = chosen_sort
         else:
             return {'list': [], 'page': page, 'pagecount': page}
         result = self._page('/search', params)

@@ -55,6 +55,9 @@ class SpiderTests(unittest.TestCase):
         self.spider.fetch = fetch
 
     def test_category_and_home(self):
+        home = self.spider.homeContent(True)
+        self.assertIn('AI生成', [item['type_id'] for item in home['class']])
+        self.assertIn('最新上傳', [item['v'] for item in home['filters']['裏番'][0]['value']])
         data = self.spider.categoryContent('裏番', '1', False, {})
         self.assertEqual(data['list'][0]['vod_id'], '123')
         self.assertEqual(data['list'][0]['vod_name'], 'Example & more')
@@ -62,6 +65,26 @@ class SpiderTests(unittest.TestCase):
         self.assertEqual(urlparse(self.urls[-1]).netloc, 'hanime1.me')
         self.assertEqual(parse_qs(urlparse(self.urls[-1]).query)['genre'], ['裏番'])
         self.assertEqual(len(self.spider.homeVideoContent()['list']), 1)
+
+    def test_sort_filter_and_rank_without_genre(self):
+        self.spider.categoryContent('裏番', '2', True, {'sort': '觀看次數'})
+        params = parse_qs(urlparse(self.urls[-1]).query)
+        self.assertEqual(params['sort'], ['觀看次數'])
+        self.assertEqual(params['page'], ['2'])
+        self.spider.categoryContent('weekly', '1', True, {'sort': '觀看次數'})
+        params = parse_qs(urlparse(self.urls[-1]).query)
+        self.assertEqual(params['sort'], ['本週排行'])
+        self.assertNotIn('genre', params)
+
+    def test_video_item_card_title_and_duration(self):
+        parser = PageParser()
+        parser.feed('''<div class="video-item-container"><a href="/watch?v=789">
+        <img data-src="https://example.com/pic.jpg"></a><span class="duration">16:22</span>
+        <div class="title">Episode &amp; More</div></div>''')
+        self.assertEqual(parser.videos, [{
+            'vod_id': '789', 'vod_name': 'Episode & More',
+            'vod_pic': 'https://example.com/pic.jpg', 'vod_remarks': '16:22'
+        }])
 
     def test_search_requires_genre(self):
         data = self.spider.searchContent('example', False)
@@ -113,7 +136,7 @@ class SpiderTests(unittest.TestCase):
         parser = PageParser()
         parser.feed('<a href="/watch?v=456"><img data-src="/cover.jpg" alt="Fallback title"></a>')
         self.assertEqual(parser.videos, [{
-            'vod_id': '456', 'vod_name': 'Fallback title', 'vod_pic': '/cover.jpg'
+            'vod_id': '456', 'vod_name': 'Fallback title', 'vod_pic': '/cover.jpg', 'vod_remarks': ''
         }])
 
 
