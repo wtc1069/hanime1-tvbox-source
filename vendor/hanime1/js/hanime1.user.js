@@ -110,6 +110,41 @@
         return result;
     }
 
+    function sourceUrl(node) {
+        var value = attr(node, 'src') || attr(node, 'data-src') || attr(node, 'data-original');
+        if (!value || /^blob:/i.test(value)) return '';
+        if (/^\/\//.test(value)) return location.protocol + value;
+        if (/^\//.test(value)) return (location.origin || 'https://hanime1.me') + value;
+        return value;
+    }
+
+    function sourceQuality(node, url) {
+        var value = attr(node, 'size') || attr(node, 'label') || attr(node, 'data-quality') || url;
+        var match = /(?:^|[^0-9])(2160|1440|1080|720|540|480|360)(?:p)?(?:[^0-9]|$)/i.exec(value || '');
+        return match ? parseInt(match[1], 10) : 0;
+    }
+
+    function preferHighestQuality() {
+        var video = one(document, 'video');
+        if (!video) return;
+        var nodes = all(video, 'source[src], source[data-src]');
+        var bestUrl = '';
+        var bestQuality = -1;
+        for (var i = 0; i < nodes.length; i++) {
+            var url = sourceUrl(nodes[i]);
+            var quality = sourceQuality(nodes[i], url);
+            if (/\.(mp4|m3u8)(?:[?#]|$)/i.test(url)) quality += 1;
+            if (url && quality > bestQuality) {
+                bestQuality = quality;
+                bestUrl = url;
+            }
+        }
+        if (bestUrl && video.currentSrc !== bestUrl && video.src !== bestUrl) {
+            video.src = bestUrl;
+            if (typeof video.load === 'function') video.load();
+        }
+    }
+
     function meta(name) {
         return attr(one(document, 'meta[property="' + name + '"]'), 'content');
     }
@@ -176,6 +211,7 @@
         playerContent: function () {
             // GM captures the actual request after the page player resolves it.
             // Its runtime removes range-specific headers before TVBox replays it.
+            preferHighestQuality();
             return {type: 'match'};
         },
 
