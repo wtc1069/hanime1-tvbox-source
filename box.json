@@ -14,7 +14,7 @@
       "name": "Hanime1 原站 (JS)",
       "type": 3,
       "api": "csp_GM",
-      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar?v=7ea270c",
       "ext": {
         "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js?v=20261004d",
         "debug": false,
@@ -52,7 +52,7 @@
       "name": "MissAV (JS)",
       "type": 3,
       "api": "csp_GM",
-      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar?v=7ea270c",
       "ext": {
         "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/js/missav.user.js",
         "debug": false,
@@ -94,7 +94,7 @@
       "name": "123AV (JS)",
       "type": 3,
       "api": "csp_GM",
-      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar?v=7ea270c",
       "ext": {
         "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/js/123av.user.js",
         "debug": false,

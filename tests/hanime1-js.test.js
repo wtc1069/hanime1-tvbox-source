@@ -50,7 +50,7 @@ function run(method, document) {
 
 test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.equal(site.api, 'csp_GM');
-    assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar$/);
+    assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar\?v=[a-f0-9]+$/);
     assert.match(site.ext.userScript, /\/vendor\/hanime1\/js\/hanime1\.user\.js\?v=[a-f0-9]+$/);
     assert.deepEqual(site.ext.playUrlMatch, [
         'https://vdownload.hembed.com/*.mp4*',

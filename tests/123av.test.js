@@ -40,7 +40,7 @@ function runPage(title, html = '<html></html>') {
 
 test('configuration uses the vendored GM runtime and original host', () => {
     assert.equal(site.api, 'csp_GM');
-    assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar$/);
+    assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar\?v=[a-f0-9]+$/);
     assert.match(site.ext.userScript, /\/vendor\/cluntop\/js\/123av\.user\.js$/);
     for (const entry of Object.values(site.ext.spider)) {
         assert.match(entry.loadUrl, /^https:\/\/123av\.com\/en\//);
