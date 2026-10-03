@@ -238,11 +238,9 @@
         },
 
         playerContent: function () {
-            return {
-                parse: 0,
-                url: bestSource(),
-                header: playbackHeaders()
-            };
+            // The site creates the media request dynamically. Let the GM JAR
+            // capture the matching request instead of reading a blob URL.
+            return {type: 'match'};
         },
 
         searchContent: function (key, quick, pg) {
@@ -261,17 +259,8 @@
             return;
         }
         if (args.name === 'playerContent') {
-            var tries = 0;
-            var waitForVideo = function () {
-                if (isChallengePage()) {
-                    send({__tvbox_challenge_url: location.href});
-                } else if (bestSource() || ++tries >= 24) {
-                    send(spider[args.name].apply(null, args.values));
-                } else {
-                    setTimeout(waitForVideo, 400);
-                }
-            };
-            waitForVideo();
+            if (isChallengePage()) send({__tvbox_challenge_url: location.href});
+            else send(spider[args.name].apply(null, args.values));
             return;
         }
         send(spider[args.name].apply(null, args.values));
