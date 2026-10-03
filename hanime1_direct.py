@@ -7,7 +7,7 @@ sys.path.append('..')
 from base.spider import Spider as BaseSpider
 
 
-HOST = 'https://www.hanime163.com'
+HOST = 'https://hanime1.me'
 GENRES = ('裏番', '泡麵番', 'Motion Anime', '3D動畫', '同人作品', 'Cosplay')
 RANKS = {
     'latest': '最新上市',
@@ -137,6 +137,6 @@ class Spider(BaseSpider):
         return {'list': result.videos, 'page': page, 'pagecount': page + int(result.next_page)}
 
     def playerContent(self, flag, id, vipFlags):
-        if not id.startswith(HOST + '/jmpres/'):
+        if urlparse(id).scheme != 'https':
             return {'parse': 0, 'url': ''}
         return {'parse': 0, 'url': id, 'header': self.headers}
