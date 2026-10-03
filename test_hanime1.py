@@ -101,7 +101,10 @@ class SpiderTests(unittest.TestCase):
         self.assertEqual(vod['vod_name'], 'Example')
         self.assertTrue(vod['vod_play_url'].startswith('Second episode$hanime1:456#First episode$'))
         self.assertEqual(len(vod['vod_play_url'].split('#')), 2)
-        self.assertIn('123-720.mp4', vod['vod_play_url'])
+        self.assertIn('First episode$hanime1:123', vod['vod_play_url'])
+        self.assertEqual(len(self.urls), 1)
+        current = self.spider.playerContent('Hanime1', 'hanime1:123', [])
+        self.assertIn('123-720.mp4', current['url'])
         self.assertEqual(len(self.urls), 1)
         play = self.spider.playerContent('Hanime1', 'hanime1:456', [])
         self.assertEqual(play['parse'], 0)
@@ -116,7 +119,7 @@ class SpiderTests(unittest.TestCase):
         <source src="https://hanime1.me/videos/123-480.mp4" type="video/mp4" size="480">
         ''')
         vod = self.spider.detailContent(['123'])['list'][0]
-        self.assertEqual(vod['vod_play_url'], 'Solo$https://hanime1.me/videos/123-480.mp4')
+        self.assertEqual(vod['vod_play_url'], 'Solo$hanime1:123')
 
     def test_legacy_playlist_and_missing_stream(self):
         self.spider.fetch = lambda url, headers: types.SimpleNamespace(text='''

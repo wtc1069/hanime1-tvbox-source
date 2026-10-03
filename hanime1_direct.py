@@ -276,8 +276,7 @@ class Spider(BaseSpider):
                 continue
             seen.add(item_id)
             name = title.replace('#', ' ').replace('$', ' ').strip() or item_id
-            target = self._best_source(result.sources) if item_id == vid else ''
-            play.append(f'{name}${target or "hanime1:" + item_id}')
+            play.append(f'{name}$hanime1:{item_id}')
         return {'list': [{
             'vod_id': vid,
             'vod_name': result.metadata.get('og:title', ''),
