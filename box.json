@@ -16,7 +16,7 @@
       "api": "csp_GM",
       "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar?v=7ea270c",
       "ext": {
-        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js?v=20261004f",
+        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js?v=20261004g",
         "debug": false,
         "webViewSettings": {
           "blockNetworkImage": true,

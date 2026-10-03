@@ -112,7 +112,8 @@
     }
 
     function sourceUrl(node) {
-        var value = attr(node, 'src') || attr(node, 'data-src') || attr(node, 'data-original');
+        var value = attr(node, 'src') || attr(node, 'data-src') || attr(node, 'data-original') ||
+            (node && (node.currentSrc || node.src || node.href)) || '';
         if (!value || /^blob:/i.test(value)) return '';
         if (/^\/\//.test(value)) return location.protocol + value;
         if (/^\//.test(value)) return (location.origin || 'https://hanime1.me') + value;
@@ -120,8 +121,12 @@
     }
 
     function sourceQuality(node, url) {
-        var value = attr(node, 'size') || attr(node, 'label') || attr(node, 'data-quality') || url;
-        var match = /(?:^|[^0-9])(2160|1440|1080|720|540|480|360)(?:p)?(?:[^0-9]|$)/i.exec(value || '');
+        var value = [
+            attr(node, 'size'), attr(node, 'label'), attr(node, 'quality'),
+            attr(node, 'data-quality'), attr(node, 'data-resolution'),
+            attr(node, 'data-height'), attr(node, 'height'), url
+        ].join(' ');
+        var match = /(?:^|[^0-9])(4320|2160|1440|1080|900|720|540|480|360)(?:p)?(?:[^0-9]|$)/i.exec(value);
         return match ? parseInt(match[1], 10) : 0;
     }
 
@@ -129,6 +134,8 @@
         var video = one(document, 'video');
         if (!video) return;
         var nodes = all(video, 'source[src], source[data-src]');
+        if (!nodes.length) nodes = all(video, 'source[src], source[data-src], source');
+        if (!nodes.length) nodes = all(document, 'source[src], source[data-src], source');
         var bestUrl = '';
         var bestQuality = -1;
         for (var i = 0; i < nodes.length; i++) {
@@ -140,7 +147,25 @@
                 bestUrl = url;
             }
         }
+        if (!bestUrl) {
+            var currentUrl = sourceUrl(video);
+            var currentQuality = sourceQuality(video, currentUrl);
+            if (currentUrl && currentQuality > bestQuality) {
+                bestUrl = currentUrl;
+                bestQuality = currentQuality;
+            }
+        }
         if (bestUrl && video.currentSrc !== bestUrl && video.src !== bestUrl) {
+            // Put the selected source first as some WebViews request the first
+            // <source> before the video element's src setter is observed.
+            for (var j = 0; j < nodes.length; j++) {
+                if (sourceUrl(nodes[j]) === bestUrl && nodes[j].parentNode &&
+                    typeof nodes[j].parentNode.insertBefore === 'function') {
+                    nodes[j].parentNode.insertBefore(nodes[j], nodes[0]);
+                    break;
+                }
+            }
+            if (typeof video.removeAttribute === 'function') video.removeAttribute('src');
             video.src = bestUrl;
             if (typeof video.load === 'function') video.load();
         }
@@ -156,7 +181,7 @@
             timer = setTimeout(function () {
                 timer = 0;
                 preferHighestQuality();
-            }, 80);
+                }, 20);
         };
         var observer = new MutationObserver(schedule);
         observer.observe(document, {childList: true, subtree: true});

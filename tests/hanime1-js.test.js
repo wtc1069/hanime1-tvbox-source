@@ -138,6 +138,25 @@ test('player selects the highest quality source before GM matching', () => {
     assert.equal(loads, 1);
 });
 
+test('player reads dynamic quality attributes and source properties', () => {
+    let selected = '';
+    const sources = [
+        Object.assign(element({size: '720p'}), {src: 'https://vdownload.hembed.com/123-low.mp4'}),
+        Object.assign(element({quality: '1080p'}), {src: 'https://vdownload.hembed.com/123-high.mp4'}),
+    ];
+    const video = {
+        currentSrc: '',
+        get src() { return selected; },
+        set src(value) { selected = value; },
+        querySelectorAll: selector => selector === 'source[src], source[data-src]' ? [] : [],
+    };
+    const result = run('playerContent', documentWith({'video': video}, {
+        'source[src], source[data-src], source': sources,
+    }));
+    assert.deepEqual(result, {type: 'match'});
+    assert.equal(selected, 'https://vdownload.hembed.com/123-high.mp4');
+});
+
 test('challenge page returns URL for the generic App verification flow', () => {
     const result = run('homeContent', documentWith({}, {}, 'Just a moment...'));
     assert.equal(result.__tvbox_challenge_url, 'https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA');
