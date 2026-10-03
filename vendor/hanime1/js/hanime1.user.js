@@ -5,6 +5,7 @@
 // @description  Hanime1 GMSpider for TVBox
 // @match        https://hanime1.me/*
 // @grant        unsafeWindow
+// @run-at       document-start
 // ==/UserScript==
 (function () {
     'use strict';
@@ -145,6 +146,27 @@
         }
     }
 
+    // Start watching as soon as the player is inserted so the first usable
+    // source is the best one instead of waiting for the page load event.
+    function installEarlyQualityPreference() {
+        if (typeof MutationObserver === 'undefined') return;
+        var timer = 0;
+        var schedule = function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function () {
+                timer = 0;
+                preferHighestQuality();
+            }, 80);
+        };
+        var observer = new MutationObserver(schedule);
+        observer.observe(document, {childList: true, subtree: true});
+        schedule();
+        setTimeout(function () {
+            observer.disconnect();
+            preferHighestQuality();
+        }, 5000);
+    }
+
     function meta(name) {
         return attr(one(document, 'meta[property="' + name + '"]'), 'content');
     }
@@ -236,6 +258,8 @@
         }
         send(spider[args.name].apply(null, args.values));
     }
+
+    if (args.name === 'playerContent') installEarlyQualityPreference();
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', run);
