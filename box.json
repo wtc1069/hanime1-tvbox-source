@@ -16,7 +16,7 @@
       "api": "csp_GM",
       "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
       "ext": {
-        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js?v=20261004b",
+        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js?v=20261004d",
         "debug": false,
         "webViewSettings": {
           "blockNetworkImage": true,
@@ -26,6 +26,12 @@
             "https://*.googletagmanager.com/*"
           ]
         },
+        "playUrlMatch": [
+          "https://vdownload.hembed.com/*.mp4*",
+          "https://vdownload.hembed.com/*.m3u8*",
+          "https://cdn.dreamserve.dev/video/*.mp4*",
+          "https://cdn.dreamserve.dev/video/*.m3u8*"
+        ],
         "spider": {
           "homeContent": {"loadUrl": "https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA&sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82"},
           "categoryContent": {"loadUrl": "https://hanime1.me/search?${tid}&page=${pg:-1}${sort:-}"},

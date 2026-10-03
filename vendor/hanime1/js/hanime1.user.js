@@ -20,7 +20,6 @@
         'AI生成', 'MMD', '同人作品', 'Cosplay'];
     var ranks = ['最新上市', '本日排行', '本週排行', '本月排行'];
     var sorts = ['最新上市', '最新上傳', '本日排行', '本週排行', '本月排行', '觀看次數'];
-    var browserUserAgent = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36';
 
     function text(node) {
         return node && node.textContent ? node.textContent.replace(/^\s+|\s+$/g, '') : '';
@@ -91,85 +90,6 @@
 
     function hasNext(pg) {
         return one(document, 'a[rel="next"]') ? pageNumber(pg) + 1 : pageNumber(pg);
-    }
-
-    function sourceUrl(node) {
-        if (!node) return '';
-        var value = node.currentSrc || node.src || attr(node, 'src') ||
-            attr(node, 'data-src') || attr(node, 'data-original');
-        if (!value || /^blob:/i.test(value)) return '';
-        if (/^\/\//.test(value)) return location.protocol + value;
-        if (/^\//.test(value)) {
-            var origin = location.origin || (location.protocol + '//' + location.host);
-            return origin + value;
-        }
-        return value;
-    }
-
-    function sourceQuality(node, url) {
-        var textValue = [attr(node, 'size'), attr(node, 'label'), attr(node, 'data-quality'), url].join(' ');
-        var matches = textValue.match(/(?:^|[^0-9])(2160|1440|1080|720|540|480|360)(?:p)?(?:[^0-9]|$)/gi) || [];
-        var quality = 0;
-        for (var i = 0; i < matches.length; i++) {
-            var value = parseInt(matches[i].replace(/[^0-9]/g, ''), 10);
-            if (!isNaN(value) && value > quality) quality = value;
-        }
-        var size = parseInt(attr(node, 'size'), 10);
-        return (isNaN(size) ? 0 : size) * 10000 + quality;
-    }
-
-    function bestSource() {
-        var nodes = [];
-        var selectors = ['video', 'video source', 'source[src]', 'source[data-src]',
-            'video source[src], source[type="video/mp4"][src]'];
-        for (var s = 0; s < selectors.length; s++) {
-            var found = all(document, selectors[s]);
-            for (var f = 0; f < found.length; f++) nodes.push(found[f]);
-        }
-        var url = '';
-        var quality = -1;
-        var seen = {};
-        for (var i = 0; i < nodes.length; i++) {
-            var candidate = sourceUrl(nodes[i]);
-            if (!/^https?:\/\//i.test(candidate) || seen[candidate]) continue;
-            seen[candidate] = true;
-            var value = sourceQuality(nodes[i], candidate);
-            // Prefer a real media URL over a poster or tracking URL when quality is equal.
-            if (/\.(mp4|m3u8)(?:[?#]|$)/i.test(candidate)) value += 1;
-            if (value >= quality) {
-                quality = value;
-                url = candidate;
-            }
-        }
-        return url;
-    }
-
-    function resourceSource() {
-        if (typeof performance === 'undefined' || !performance.getEntriesByType) return '';
-        var entries = performance.getEntriesByType('resource') || [];
-        for (var i = entries.length - 1; i >= 0; i--) {
-            var url = entries[i] && entries[i].name || '';
-            if (/^https:\/\/(?:vdownload\.hembed\.com\/[^?#]+|cdn\.dreamserve\.dev\/video\/[^?#]+)\.(?:mp4|m3u8)(?:[?#]|$)/i.test(url)) {
-                return url;
-            }
-        }
-        return '';
-    }
-
-    function playbackSource() {
-        return resourceSource() || bestSource();
-    }
-
-    function playbackHeaders() {
-        var headers = {
-            'User-Agent': browserUserAgent,
-            Referer: 'https://hanime1.me/'
-        };
-        // Keep the WebView session available to the external TVBox player when the
-        // media host checks the same session as the page.
-        var cookies = document.cookie || '';
-        if (cookies) headers.Cookie = cookies;
-        return headers;
     }
 
     function playlist(currentId, currentName) {
@@ -254,15 +174,9 @@
         },
 
         playerContent: function () {
-            var url = playbackSource();
-            if (!url) return null;
-            // Do not forward the WebView's Range header. It can point into the
-            // middle of an MP4 and makes external players reject the stream.
-            return {
-                parse: 0,
-                url: url,
-                header: playbackHeaders()
-            };
+            // GM captures the actual request after the page player resolves it.
+            // Its runtime removes range-specific headers before TVBox replays it.
+            return {type: 'match'};
         },
 
         searchContent: function (key, quick, pg) {
@@ -281,20 +195,7 @@
             return;
         }
         if (args.name === 'playerContent') {
-            var tries = 0;
-            var waitForPlayback = function () {
-                if (isChallengePage()) {
-                    send({__tvbox_challenge_url: location.href});
-                    return;
-                }
-                var result = spider.playerContent();
-                if (result || ++tries >= 30) {
-                    send(result || {});
-                } else {
-                    setTimeout(waitForPlayback, 400);
-                }
-            };
-            waitForPlayback();
+            send(spider.playerContent());
             return;
         }
         send(spider[args.name].apply(null, args.values));

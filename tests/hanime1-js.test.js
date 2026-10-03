@@ -30,13 +30,13 @@ function documentWith(selectors = {}, collections = {}, title = 'Hanime1', html 
     };
 }
 
-function run(method, document, resources = []) {
+function run(method, document) {
     let result;
     const context = vm.createContext({
         document,
         location: {href: 'https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA'},
         window: {},
-        performance: {getEntriesByType: () => resources.map(name => ({name}))},
+        performance: {getEntriesByType: () => []},
         setTimeout: () => { throw new Error('unexpected wait'); },
         GmSpiderInject: {
             GetSpiderArgs: () => JSON.stringify([method, ['123']]),
@@ -52,7 +52,12 @@ test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.equal(site.api, 'csp_GM');
     assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar$/);
     assert.match(site.ext.userScript, /\/vendor\/hanime1\/js\/hanime1\.user\.js\?v=[a-f0-9]+$/);
-    assert.equal(site.ext.playUrlMatch, undefined);
+    assert.deepEqual(site.ext.playUrlMatch, [
+        'https://vdownload.hembed.com/*.mp4*',
+        'https://vdownload.hembed.com/*.m3u8*',
+        'https://cdn.dreamserve.dev/video/*.mp4*',
+        'https://cdn.dreamserve.dev/video/*.m3u8*',
+    ]);
     for (const entry of Object.values(site.ext.spider)) {
         assert.match(entry.loadUrl, /^https:\/\/hanime1\.me\//);
     }
@@ -75,7 +80,7 @@ test('homepage emits classes and parses video cards', () => {
     assert.equal(result.list[0].vod_remarks, '20:00');
 });
 
-test('detail returns playlist identifiers and player chooses the highest source', () => {
+test('detail returns playlist identifiers and player delegates media capture to GM', () => {
     const playlistLink = element({href: '/watch?v=456'});
     const playlistCard = element({}, '', {
         'a[href*="/watch"]': playlistLink,
@@ -89,10 +94,6 @@ test('detail returns playlist identifiers and player chooses the highest source'
         h1: element({}, 'Current episode'),
     }, {
         '#video-playlist-wrapper .playlist-video-card, .video-playlist-wrapper .playlist-video-card, .related-watch-wrap': [playlistCard],
-        'video source[src], source[type="video/mp4"][src]': [
-            element({src: 'https://hanime1.me/videos/123-480.mp4', size: '480'}),
-            element({src: 'https://hanime1.me/videos/123-1080.mp4', size: '1080'}),
-        ],
     });
     const detailResult = run('detailContent', detail);
     const media = detailResult.list[0].vod_play_data[0].media;
@@ -101,9 +102,7 @@ test('detail returns playlist identifiers and player chooses the highest source'
         name: 'Second episode', type: 'webview', ext: {replace: {vod_id: '456'}}
     });
     const playerResult = run('playerContent', detail);
-    assert.equal(playerResult.url, 'https://hanime1.me/videos/123-1080.mp4');
-    assert.equal(playerResult.header.Referer, 'https://hanime1.me/');
-    assert.equal(playerResult.header.Range, undefined);
+    assert.deepEqual(playerResult, {type: 'match'});
 });
 
 test('detail does not wait for a dynamically loaded video source', () => {
@@ -115,14 +114,9 @@ test('detail does not wait for a dynamically loaded video source', () => {
     assert.equal(result.list[0].vod_id, '123');
 });
 
-test('player uses the latest dynamic media resource without forwarding Range', () => {
-    const result = run('playerContent', documentWith(), [
-        'https://cdn.dreamserve.dev/video/older.mp4',
-        'https://cdn.dreamserve.dev/video/current.mp4'
-    ]);
-    assert.equal(result.url, 'https://cdn.dreamserve.dev/video/current.mp4');
-    assert.equal(result.header.Referer, 'https://hanime1.me/');
-    assert.equal(result.header.Range, undefined);
+test('player does not depend on cross-origin performance entries', () => {
+    const result = run('playerContent', documentWith());
+    assert.deepEqual(result, {type: 'match'});
 });
 
 test('challenge page returns URL for the generic App verification flow', () => {
