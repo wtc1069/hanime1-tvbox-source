@@ -10,14 +10,46 @@
       "filterable": 0
     },
     {
-      "key": "missav_direct.py",
-      "name": "MissAV 原站 (Python)",
+      "key": "MissAV",
+      "name": "MissAV (JS)",
       "type": 3,
-      "api": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/bfb0c00/missav_direct.py",
-      "timeout": 120,
+      "api": "csp_GM",
+      "jar": "https://clun.top/jar/gm.jar",
+      "ext": {
+        "userScript": "https://clun.top/js/missav.user.js",
+        "debug": false,
+        "webViewSettings": {
+          "blockNetworkImage": true,
+          "blockList": [
+            "*.ico", "*.png", "*.css", "*.svg",
+            "https://*.cloudflareinsights.com/*",
+            "https://*.googletagmanager.com/*",
+            "https://*.ktkjmp.com/*",
+            "https://*.magsrv.com/*",
+            "https://*.mnaspm.com/*",
+            "https://*.myavlive.com/*",
+            "https://*.recombee.com/*",
+            "https://*.rmhfrtnd.com/*",
+            "https://*.tsyndicate.com/*",
+            "https://missav.com/fonts/*",
+            "https://tsyndicate.com/*",
+            "https://*.trackwilltrk.com/*",
+            "https://hartattenuate.com/*"
+          ]
+        },
+        "spider": {
+          "homeContent": {"loadUrl": "https://missav.ws/cn/"},
+          "categoryContent": {"loadUrl": "https://missav.ws/cn/${tid}?page=${pg:-1}${filter:-}${sort:-}"},
+          "detailContent": {"loadUrl": "https://missav.ws/cn/${id}"},
+          "searchContent": {"loadUrl": "https://missav.ws/cn/search/${key}?page=${pg:-1}"}
+        }
+      },
+      "timeout": 60,
       "searchable": 1,
       "quickSearch": 1,
-      "filterable": 0
+      "changeable": 0,
+      "filterable": 1,
+      "style": {"type": "rect", "ratio": 1.49}
     }
   ]
 }
