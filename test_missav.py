@@ -12,9 +12,11 @@ from missav_direct import HOST, MissavParser, Spider, video_id, video_source
 
 
 LIST_HTML = '''
-<div class="item-wrapper"><a href="/cn/abc-123"><img data-src="/cover.jpg" alt="Fallback"></a>
-  <div class="truncate"><a href="/cn/abc-123">Sample &amp; title</a></div>
-  <span class="absolute">HD</span></div>
+<div class="thumbnail group"><div class="relative"><a href="https://missav.ws/cn/abc-123">
+  <video data-src="https://media.example/preview.mp4"></video>
+  <img data-src="/cover.jpg" alt="Fallback"></a>
+  <a href="/cn/abc-123"><span class="absolute bottom-1">1:01:55</span></a></div>
+  <div class="my-2 truncate"><a href="/cn/abc-123">Sample &amp; title</a></div></div>
 <div class="item-wrapper"><a href="/cn/new"><img src="/category.jpg"></a></div>
 <a rel="next" href="?page=2">Next</a>
 '''
@@ -34,7 +36,9 @@ class MissavTests(unittest.TestCase):
 
         def fetch(url, **kwargs):
             self.urls.append(url)
-            return types.SimpleNamespace(text=DETAIL_HTML if url.endswith('/abc-123') else LIST_HTML)
+            return types.SimpleNamespace(
+                text=DETAIL_HTML if url.endswith('/abc-123') else LIST_HTML,
+                raise_for_status=lambda: None)
 
         self.spider.fetch = fetch
 
@@ -45,7 +49,7 @@ class MissavTests(unittest.TestCase):
         self.assertEqual(self.urls[-1], HOST + '/cn/new?page=2')
         self.assertEqual(result['list'][0], {
             'vod_id': 'abc-123', 'vod_name': 'Sample & title',
-            'vod_pic': HOST + '/cover.jpg', 'vod_remarks': 'HD',
+            'vod_pic': HOST + '/cover.jpg', 'vod_remarks': '1:01:55',
         })
         self.assertEqual(result['pagecount'], 3)
         self.assertEqual(self.spider.categoryContent('../bad', '1', False, {})['list'], [])
@@ -75,8 +79,22 @@ class MissavTests(unittest.TestCase):
         parser = MissavParser()
         parser.feed('<title>Just a moment...</title><div>Cloudflare</div>')
         self.assertEqual(parser.videos, [])
-        self.spider.fetch = lambda url, **kwargs: types.SimpleNamespace(text='')
+        self.spider.fetch = lambda url, **kwargs: types.SimpleNamespace(
+            text='', raise_for_status=lambda: None)
         self.assertEqual(self.spider.detailContent(['abc-123']), {'list': []})
+
+    def test_legacy_card_and_http_failure(self):
+        parser = MissavParser()
+        parser.feed('<div class="item-wrapper"><a href="/cn/old-123">'
+                    '<img src="/old.jpg" alt="Old"></a></div>')
+        self.assertEqual(parser.videos[0]['vod_id'], 'old-123')
+
+        def rejected(url, **kwargs):
+            return types.SimpleNamespace(text=LIST_HTML,
+                                         raise_for_status=lambda: (_ for _ in ()).throw(Exception('403')))
+
+        self.spider.fetch = rejected
+        self.assertEqual(self.spider.homeVideoContent(), {'list': []})
 
 
 if __name__ == '__main__':

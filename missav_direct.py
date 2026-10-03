@@ -52,7 +52,7 @@ class MissavParser(HTMLParser):
         classes = attrs.get('class', '').split()
         if tag == 'div':
             self.depth += 1
-            if self.card is None and 'item-wrapper' in classes:
+            if self.card is None and ('item-wrapper' in classes or 'thumbnail' in classes):
                 self.card_depth = self.depth
                 self.card = {'vod_id': '', 'vod_name': '', 'vod_pic': '',
                              'vod_remarks': '', 'fallback': ''}
@@ -120,8 +120,10 @@ class Spider(BaseSpider):
     def _page(self, path):
         try:
             response = self.fetch(HOST + path, headers=self.headers, timeout=20)
+            response.raise_for_status()
             page = response.text
-        except Exception:
+        except Exception as exc:
+            print('MissAV request failed for {}: {}'.format(path, exc), file=sys.stderr)
             page = ''
         parser = MissavParser()
         parser.feed(page)
