@@ -97,6 +97,24 @@ test('detail returns playlist identifiers and player chooses the highest source'
     const playerResult = run('playerContent', detail);
     assert.equal(playerResult.url, 'https://hanime1.me/videos/123-1080.mp4');
     assert.equal(playerResult.header.Referer, 'https://hanime1.me/');
+    assert.match(playerResult.header['User-Agent'], /Android 13/);
+});
+
+test('detail does not wait for a dynamically loaded video source', () => {
+    const detail = documentWith({
+        'meta[property="og:title"]': element({content: 'Current episode'}),
+        'meta[property="og:image"]': element({content: 'https://cdn.example/cover.jpg'}),
+    });
+    const result = run('detailContent', detail);
+    assert.equal(result.list[0].vod_id, '123');
+});
+
+test('player accepts the browser video currentSrc when no source tag is present', () => {
+    const video = element({}, '', {});
+    video.currentSrc = 'https://hanime1.me/videos/123-1080.m3u8';
+    const document = documentWith({}, {'video': [video]});
+    const result = run('playerContent', document);
+    assert.equal(result.url, video.currentSrc);
 });
 
 test('challenge page returns URL for the generic App verification flow', () => {

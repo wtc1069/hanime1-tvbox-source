@@ -20,6 +20,7 @@
         'AI生成', 'MMD', '同人作品', 'Cosplay'];
     var ranks = ['最新上市', '本日排行', '本週排行', '本月排行'];
     var sorts = ['最新上市', '最新上傳', '本日排行', '本週排行', '本月排行', '觀看次數'];
+    var browserUserAgent = 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36';
 
     function text(node) {
         return node && node.textContent ? node.textContent.replace(/^\s+|\s+$/g, '') : '';
@@ -92,21 +93,67 @@
         return one(document, 'a[rel="next"]') ? pageNumber(pg) + 1 : pageNumber(pg);
     }
 
+    function sourceUrl(node) {
+        if (!node) return '';
+        var value = node.currentSrc || node.src || attr(node, 'src') ||
+            attr(node, 'data-src') || attr(node, 'data-original');
+        if (!value || /^blob:/i.test(value)) return '';
+        if (/^\/\//.test(value)) return location.protocol + value;
+        if (/^\//.test(value)) {
+            var origin = location.origin || (location.protocol + '//' + location.host);
+            return origin + value;
+        }
+        return value;
+    }
+
+    function sourceQuality(node, url) {
+        var textValue = [attr(node, 'size'), attr(node, 'label'), attr(node, 'data-quality'), url].join(' ');
+        var matches = textValue.match(/(?:^|[^0-9])(2160|1440|1080|720|540|480|360)(?:p)?(?:[^0-9]|$)/gi) || [];
+        var quality = 0;
+        for (var i = 0; i < matches.length; i++) {
+            var value = parseInt(matches[i].replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(value) && value > quality) quality = value;
+        }
+        var size = parseInt(attr(node, 'size'), 10);
+        return (isNaN(size) ? 0 : size) * 10000 + quality;
+    }
+
     function bestSource() {
-        var sources = all(document, 'video source[src], source[type="video/mp4"][src]');
+        var nodes = [];
+        var selectors = ['video', 'video source', 'source[src]', 'source[data-src]',
+            'video source[src], source[type="video/mp4"][src]'];
+        for (var s = 0; s < selectors.length; s++) {
+            var found = all(document, selectors[s]);
+            for (var f = 0; f < found.length; f++) nodes.push(found[f]);
+        }
         var url = '';
-        var size = -1;
-        for (var i = 0; i < sources.length; i++) {
-            var candidate = attr(sources[i], 'src');
-            if (!/^https:\/\//i.test(candidate)) continue;
-            var value = parseInt(attr(sources[i], 'size'), 10);
-            value = isNaN(value) ? 0 : value;
-            if (value >= size) {
-                size = value;
+        var quality = -1;
+        var seen = {};
+        for (var i = 0; i < nodes.length; i++) {
+            var candidate = sourceUrl(nodes[i]);
+            if (!/^https?:\/\//i.test(candidate) || seen[candidate]) continue;
+            seen[candidate] = true;
+            var value = sourceQuality(nodes[i], candidate);
+            // Prefer a real media URL over a poster or tracking URL when quality is equal.
+            if (/\.(mp4|m3u8)(?:[?#]|$)/i.test(candidate)) value += 1;
+            if (value >= quality) {
+                quality = value;
                 url = candidate;
             }
         }
         return url;
+    }
+
+    function playbackHeaders() {
+        var headers = {
+            'User-Agent': browserUserAgent,
+            Referer: 'https://hanime1.me/'
+        };
+        // Keep the WebView session available to the external TVBox player when the
+        // media host checks the same session as the page.
+        var cookies = document.cookie || '';
+        if (cookies) headers.Cookie = cookies;
+        return headers;
     }
 
     function playlist(currentId, currentName) {
@@ -187,7 +234,11 @@
         },
 
         playerContent: function () {
-            return {parse: 0, url: bestSource(), header: {Referer: 'https://hanime1.me/'}};
+            return {
+                parse: 0,
+                url: bestSource(),
+                header: playbackHeaders()
+            };
         },
 
         searchContent: function (key, quick, pg) {
@@ -205,15 +256,15 @@
             send({__tvbox_challenge_url: location.href});
             return;
         }
-        if (args.name === 'detailContent' || args.name === 'playerContent') {
+        if (args.name === 'playerContent') {
             var tries = 0;
             var waitForVideo = function () {
                 if (isChallengePage()) {
                     send({__tvbox_challenge_url: location.href});
-                } else if (bestSource() || ++tries >= 60) {
+                } else if (bestSource() || ++tries >= 24) {
                     send(spider[args.name].apply(null, args.values));
                 } else {
-                    setTimeout(waitForVideo, 500);
+                    setTimeout(waitForVideo, 400);
                 }
             };
             waitForVideo();
