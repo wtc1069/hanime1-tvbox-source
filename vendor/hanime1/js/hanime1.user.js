@@ -124,49 +124,76 @@
         var value = [
             attr(node, 'size'), attr(node, 'label'), attr(node, 'quality'),
             attr(node, 'data-quality'), attr(node, 'data-resolution'),
-            attr(node, 'data-height'), attr(node, 'height'), url
+            attr(node, 'data-height'), attr(node, 'height'), attr(node, 'width'), url
         ].join(' ');
         var match = /(?:^|[^0-9])(4320|2160|1440|1080|900|720|540|480|360)(?:p)?(?:[^0-9]|$)/i.exec(value);
         return match ? parseInt(match[1], 10) : 0;
     }
 
-    function preferHighestQuality() {
-        var video = one(document, 'video');
-        if (!video) return;
+    function globalObject() {
+        try {
+            if (typeof unsafeWindow !== 'undefined' && unsafeWindow) return unsafeWindow;
+        } catch (e) {}
+        return typeof window !== 'undefined' ? window : {};
+    }
+
+    function playerInstance() {
+        var root = globalObject();
+        return root.player || root.plyr || null;
+    }
+
+    function qualitySources(video) {
         var nodes = all(video, 'source[src], source[data-src]');
         if (!nodes.length) nodes = all(video, 'source[src], source[data-src], source');
         if (!nodes.length) nodes = all(document, 'source[src], source[data-src], source');
-        var bestUrl = '';
-        var bestQuality = -1;
+        var result = [];
+        var best = null;
         for (var i = 0; i < nodes.length; i++) {
             var url = sourceUrl(nodes[i]);
+            if (!url) continue;
             var quality = sourceQuality(nodes[i], url);
             if (/\.(mp4|m3u8)(?:[?#]|$)/i.test(url)) quality += 1;
-            if (url && quality > bestQuality) {
-                bestQuality = quality;
-                bestUrl = url;
-            }
+            result.push({node: nodes[i], url: url, quality: quality});
+            if (!best || quality > best.quality) best = result[result.length - 1];
         }
-        if (!bestUrl) {
-            var currentUrl = sourceUrl(video);
-            var currentQuality = sourceQuality(video, currentUrl);
-            if (currentUrl && currentQuality > bestQuality) {
-                bestUrl = currentUrl;
-                bestQuality = currentQuality;
-            }
+        var currentUrl = sourceUrl(video);
+        if (currentUrl) {
+            var current = {node: video, url: currentUrl, quality: sourceQuality(video, currentUrl)};
+            if (!best || current.quality > best.quality) best = current;
         }
-        if (bestUrl && video.currentSrc !== bestUrl && video.src !== bestUrl) {
+        return {all: result, best: best};
+    }
+
+    function preferHighestQuality() {
+        var video = one(document, 'video');
+        if (!video) return;
+        var sources = qualitySources(video);
+        var best = sources.best;
+        if (!best) return;
+
+        // Plyr builds its quality menu after the <source> elements exist. Set
+        // the public quality property after that initialization so its own
+        // source switch cannot put the default (usually 720p) back first.
+        var player = playerInstance();
+        if (player && best.quality > 1) {
+            var requestedQuality = best.quality - 1;
+            try {
+                if (player.quality !== requestedQuality) player.quality = requestedQuality;
+            } catch (e) {}
+        }
+
+        if (best.url && video.currentSrc !== best.url && video.src !== best.url) {
             // Put the selected source first as some WebViews request the first
             // <source> before the video element's src setter is observed.
-            for (var j = 0; j < nodes.length; j++) {
-                if (sourceUrl(nodes[j]) === bestUrl && nodes[j].parentNode &&
-                    typeof nodes[j].parentNode.insertBefore === 'function') {
-                    nodes[j].parentNode.insertBefore(nodes[j], nodes[0]);
+            for (var j = 0; j < sources.all.length; j++) {
+                if (sources.all[j].url === best.url && sources.all[j].node.parentNode &&
+                    typeof sources.all[j].node.parentNode.insertBefore === 'function') {
+                    sources.all[j].node.parentNode.insertBefore(sources.all[j].node, sources.all[0].node);
                     break;
                 }
             }
             if (typeof video.removeAttribute === 'function') video.removeAttribute('src');
-            video.src = bestUrl;
+            video.src = best.url;
             if (typeof video.load === 'function') video.load();
         }
     }
@@ -176,20 +203,26 @@
     function installEarlyQualityPreference() {
         if (typeof MutationObserver === 'undefined') return;
         var timer = 0;
+        var poll = 0;
         var schedule = function () {
             if (timer) clearTimeout(timer);
             timer = setTimeout(function () {
                 timer = 0;
                 preferHighestQuality();
-                }, 20);
+            }, 0);
         };
         var observer = new MutationObserver(schedule);
         observer.observe(document, {childList: true, subtree: true});
         schedule();
+        // The site's DOMContentLoaded handler creates window.player after the
+        // sources are parsed. Keep applying the selected quality while that
+        // instance is being initialized, then stop once the page has settled.
+        poll = setInterval(preferHighestQuality, 50);
         setTimeout(function () {
             observer.disconnect();
+            if (poll) clearInterval(poll);
             preferHighestQuality();
-        }, 5000);
+        }, 10000);
     }
 
     function meta(name) {
@@ -278,7 +311,13 @@
             return;
         }
         if (args.name === 'playerContent') {
-            send(spider.playerContent());
+            // Give Plyr a short window to build its quality menu and switch
+            // the media element before GM starts matching a media request.
+            preferHighestQuality();
+            setTimeout(function () {
+                preferHighestQuality();
+                send(spider.playerContent());
+            }, 350);
             return;
         }
         send(spider[args.name].apply(null, args.values));

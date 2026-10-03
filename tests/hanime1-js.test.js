@@ -30,14 +30,18 @@ function documentWith(selectors = {}, collections = {}, title = 'Hanime1', html 
     };
 }
 
-function run(method, document) {
+function run(method, document, globals = {}) {
     let result;
+    let timers = [];
     const context = vm.createContext({
         document,
         location: {href: 'https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA'},
-        window: {},
+        window: globals,
         performance: {getEntriesByType: () => []},
-        setTimeout: () => { throw new Error('unexpected wait'); },
+        setTimeout: (fn, delay) => { timers.push({fn, delay}); return timers.length; },
+        setInterval: () => 0,
+        clearTimeout: () => {},
+        clearInterval: () => {},
         GmSpiderInject: {
             GetSpiderArgs: () => JSON.stringify([method, ['123']]),
             SetSpiderResult: value => { result = JSON.parse(value); },
@@ -45,6 +49,7 @@ function run(method, document) {
     });
     vm.runInContext('Array.prototype.at = undefined', context);
     vm.runInContext(script, context);
+    for (const timer of timers) timer.fn();
     return result;
 }
 
@@ -155,6 +160,30 @@ test('player reads dynamic quality attributes and source properties', () => {
     }));
     assert.deepEqual(result, {type: 'match'});
     assert.equal(selected, 'https://vdownload.hembed.com/123-high.mp4');
+});
+
+test('player asks Plyr to switch its selected quality after initialization', () => {
+    let selected = 720;
+    const sources = [
+        Object.assign(element({src: 'https://vdownload.hembed.com/123-sc-720p.mp4', size: '720'}), {parentNode: {insertBefore: () => {}}}),
+        Object.assign(element({src: 'https://vdownload.hembed.com/123-sc-1080p.mp4', size: '1080'}), {parentNode: {insertBefore: () => {}}}),
+    ];
+    const video = {
+        currentSrc: '',
+        get src() { return ''; },
+        set src(value) {},
+        load: () => {},
+        querySelectorAll: () => sources,
+    };
+    const player = {};
+    Object.defineProperty(player, 'quality', {
+        get: () => selected,
+        set: value => { selected = value; },
+    });
+    const document = documentWith({'video': video});
+    const result = run('playerContent', document, {player});
+    assert.deepEqual(result, {type: 'match'});
+    assert.equal(selected, 1080);
 });
 
 test('challenge page returns URL for the generic App verification flow', () => {
