@@ -1,11 +1,13 @@
-# Hanime1 TVBox 单站点配置
+# Hanime1 TVBox Python 站点
 
-配置地址：
+适用于支持 Python 站点规则的 TVBox 版本（如 `python32`）。配置地址：
 
 ```text
 https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/box.json
 ```
 
-在支持 TVBox 配置及 `csp_XYQHiker` 的应用中，将该地址填入配置地址栏。本仓库只提供一个站点配置，规则和 JAR 分别来自 [wanganni/yinshiyuan 的 Hanime1 规则](https://github.com/wanganni/yinshiyuan/blob/main/tv/XYQHiker/hanime1.json)及其配套 JAR；这些文件不由本仓库维护。
+本规则使用 `hanime163.com` 镜像：目标 `hanime1.me` 从验证环境返回 HTTP 403。已检查镜像分类页、详情页和媒体地址在验证环境中可访问，但尚未在电视端验收；不同地区网络可能仍有差异。视频地址由目标站点签名且会过期，播放失败时请重新打开详情页获取新地址。请仅在有权访问相关内容的情况下使用。
 
-配置文件可以解析，依赖地址在发布时可访问。由于 `hanime1.me` 从验证环境返回 HTTP 403，未验证搜索、详情和播放功能。上游规则还包含与目标站点不一致的播放前缀，因此不能保证实际播放成功。请勿在配置地址中加入 GitHub 私人令牌。
+在 TVBox 中重新加载上述配置，选择 `Hanime1 (Python)` 站点。当前搜索使用 `裏番` 分类，因为镜像在省略分类时返回空列表。若仍显示旧的 `Hanime1` 站点，可清除该配置缓存后再次导入。
+
+规则参考了 [cluntop/tvbox 的 Hanime Python 实现](https://github.com/cluntop/tvbox/blob/main/py/Hanime.py)和 [bizhangjie/CatVodSpider](https://github.com/bizhangjie/CatVodSpider/blob/main/app/src/main/java/com/github/catvod/spider/Hanime.java) 的分类方式；本站规则独立解析当前镜像页面，不依赖其他站点的 JAR 或播放前缀。

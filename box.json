@@ -1,15 +1,13 @@
 {
-  "spider": "https://raw.githubusercontent.com/wanganni/yinshiyuan/main/jar/xbpqxyq.jar",
   "sites": [
     {
-      "key": "hanime1_xyqhiker",
-      "name": "Hanime1",
+      "key": "hanime1.py",
+      "name": "Hanime1 (Python)",
       "type": 3,
-      "api": "csp_XYQHiker",
+      "api": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/hanime1.py",
       "searchable": 1,
       "quickSearch": 1,
-      "filterable": 0,
-      "ext": "https://raw.githubusercontent.com/wanganni/yinshiyuan/main/tv/XYQHiker/hanime1.json"
+      "filterable": 0
     }
   ]
 }
