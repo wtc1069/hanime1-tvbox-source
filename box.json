@@ -13,7 +13,7 @@
       "key": "missav_direct.py",
       "name": "MissAV 原站 (Python)",
       "type": 3,
-      "api": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/missav_direct.py",
+      "api": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/9c33d42/missav_direct.py",
       "timeout": 120,
       "searchable": 1,
       "quickSearch": 1,
