@@ -17,6 +17,82 @@ RANKS = {
 }
 
 
+def watch_id(href):
+    parsed = urlparse(href)
+    if parsed.netloc and parsed.netloc != 'hanime1.me':
+        return ''
+    vid = parse_qs(parsed.query).get('v', [''])[0]
+    return vid if parsed.path == '/watch' and vid.isdigit() else ''
+
+
+class PlaylistParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.entries = []
+        self.div_depth = 0
+        self.wrapper_depth = None
+        self.card_depth = None
+        self.card = None
+        self.title_tag = None
+        self.anchor_text = ''
+        self.in_anchor = False
+
+    def handle_starttag(self, tag, attributes):
+        attrs = dict(attributes)
+        classes = attrs.get('class', '').split()
+        if tag == 'div':
+            self.div_depth += 1
+            if self.wrapper_depth is None and (
+                attrs.get('id') == 'video-playlist-wrapper' or 'video-playlist-wrapper' in classes
+            ):
+                self.wrapper_depth = self.div_depth
+            elif self.wrapper_depth is not None and self.card is None and (
+                'playlist-video-card' in classes or 'video-item-container' in classes
+                or 'related-watch-wrap' in classes
+            ):
+                self.card_depth = self.div_depth
+                self.card = {'id': '', 'title': '', 'fallback': ''}
+        if self.card is None:
+            return
+        if tag == 'a':
+            vid = watch_id(attrs.get('href', ''))
+            if vid:
+                self.card['id'] = vid
+                self.card['fallback'] = self.card['fallback'] or attrs.get('title', '')
+                self.in_anchor = True
+                self.anchor_text = ''
+        if tag == 'img':
+            self.card['fallback'] = self.card['fallback'] or attrs.get('alt', '')
+        if (tag == 'h4' and 'video-title' in classes) or ('card-mobile-title' in classes):
+            self.title_tag = tag
+
+    def handle_data(self, data):
+        if self.card is not None:
+            if self.title_tag:
+                self.card['title'] += data
+            if self.in_anchor:
+                self.anchor_text += data
+
+    def handle_endtag(self, tag):
+        if self.card is not None:
+            if tag == self.title_tag:
+                self.title_tag = None
+            if tag == 'a' and self.in_anchor:
+                self.card['fallback'] = self.card['fallback'] or self.anchor_text.strip()
+                self.in_anchor = False
+        if tag == 'div':
+            if self.card_depth == self.div_depth:
+                if self.card['id']:
+                    title = self.card['title'].strip() or self.card['fallback'].strip() or self.card['id']
+                    self.entries.append((self.card['id'], title))
+                self.card = None
+                self.card_depth = None
+                self.title_tag = None
+            if self.wrapper_depth == self.div_depth:
+                self.wrapper_depth = None
+            self.div_depth = max(0, self.div_depth - 1)
+
+
 class PageParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -24,6 +100,7 @@ class PageParser(HTMLParser):
         self.sources = []
         self.metadata = {}
         self.next_page = False
+        self.playlist = []
         self.card = None
         self.depth = 0
         self.title_depth = None
@@ -94,7 +171,16 @@ class Spider(BaseSpider):
         response = self.fetch(url, headers=self.headers)
         parser = PageParser()
         parser.feed(response.text)
+        if path == '/watch':
+            playlist = PlaylistParser()
+            playlist.feed(response.text)
+            parser.playlist = playlist.entries
         return parser
+
+    @staticmethod
+    def _best_source(sources):
+        valid = [(size, url) for size, url in sources if urlparse(url).scheme == 'https']
+        return max(valid, key=lambda item: int(item[0]) if item[0].isdigit() else 0)[1] if valid else ''
 
     def homeContent(self, filter):
         classes = [{'type_name': name, 'type_id': name} for name in GENRES]
@@ -122,8 +208,18 @@ class Spider(BaseSpider):
         if not vid.isdigit():
             return {'list': []}
         result = self._page('/watch', {'v': vid})
-        sources = sorted(result.sources, key=lambda item: int(item[0]) if item[0].isdigit() else 0, reverse=True)
-        play = [f'{size}P${url}' for size, url in sources if url.startswith('https://')]
+        entries = result.playlist or [(vid, result.metadata.get('og:title', '') or vid)]
+        if vid not in {item_id for item_id, _ in entries}:
+            entries.append((vid, result.metadata.get('og:title', '') or vid))
+        seen = set()
+        play = []
+        for item_id, title in entries:
+            if item_id in seen:
+                continue
+            seen.add(item_id)
+            name = title.replace('#', ' ').replace('$', ' ').strip() or item_id
+            target = self._best_source(result.sources) if item_id == vid else ''
+            play.append(f'{name}${target or "hanime1:" + item_id}')
         return {'list': [{
             'vod_id': vid,
             'vod_name': result.metadata.get('og:title', ''),
@@ -139,6 +235,12 @@ class Spider(BaseSpider):
         return {'list': result.videos, 'page': page, 'pagecount': page + int(result.next_page)}
 
     def playerContent(self, flag, id, vipFlags):
+        if id.startswith('hanime1:'):
+            vid = id[len('hanime1:'):]
+            if not vid.isdigit():
+                return {'parse': 0, 'url': ''}
+            result = self._page('/watch', {'v': vid})
+            id = self._best_source(result.sources)
         if urlparse(id).scheme != 'https':
             return {'parse': 0, 'url': ''}
         return {'parse': 0, 'url': id, 'header': self.headers}

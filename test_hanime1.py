@@ -27,7 +27,17 @@ DETAIL_HTML = '''
 <meta property="og:description" content="Description">
 <video><source src="https://hanime1.me/videos/123-480.mp4?key=abc" type="video/mp4" size="480">
 <source src="https://hanime1.me/videos/123-720.mp4?key=abc" type="video/mp4" size="720"></video>
+<div id="video-playlist-wrapper">
+  <h4><a href="/playlist?v=42">清單 Example</a></h4>
+  <div class="playlist-video-card"><a href="/watch?v=456"><img alt="Second"></a>
+    <h4 class="video-title">Second episode</h4></div>
+  <div class="playlist-video-card"><a href="/watch?v=123"><img alt="First"></a>
+    <h4 class="video-title">First episode</h4></div>
+  <div class="playlist-video-card"><a href="/watch?v=456"><img alt="Duplicate"></a></div>
+</div>
 '''
+SECOND_HTML = '''<video><source src="https://hanime1.me/videos/456-480.mp4" type="video/mp4" size="480">
+<source src="https://hanime1.me/videos/456-1080.mp4" type="video/mp4" size="1080"></video>'''
 
 
 class SpiderTests(unittest.TestCase):
@@ -38,6 +48,8 @@ class SpiderTests(unittest.TestCase):
 
         def fetch(url, headers):
             self.urls.append(url)
+            if parse_qs(urlparse(url).query).get('v') == ['456']:
+                return types.SimpleNamespace(text=SECOND_HTML)
             return types.SimpleNamespace(text=DETAIL_HTML if '/watch?' in url else LIST_HTML)
 
         self.spider.fetch = fetch
@@ -61,17 +73,41 @@ class SpiderTests(unittest.TestCase):
     def test_detail_and_player(self):
         vod = self.spider.detailContent(['123'])['list'][0]
         self.assertEqual(vod['vod_name'], 'Example')
-        self.assertTrue(vod['vod_play_url'].startswith('720P$'))
+        self.assertTrue(vod['vod_play_url'].startswith('Second episode$hanime1:456#First episode$'))
         self.assertEqual(len(vod['vod_play_url'].split('#')), 2)
-        url = vod['vod_play_url'].split('$', 1)[1].split('#')[0]
-        play = self.spider.playerContent('Hanime1', url, [])
+        self.assertIn('123-720.mp4', vod['vod_play_url'])
+        self.assertEqual(len(self.urls), 1)
+        play = self.spider.playerContent('Hanime1', 'hanime1:456', [])
         self.assertEqual(play['parse'], 0)
+        self.assertIn('456-1080.mp4', play['url'])
         self.assertEqual(play['header']['Referer'], 'https://hanime1.me/')
+        self.assertEqual(len(self.urls), 2)
+
+    def test_without_playlist_uses_current_video_only(self):
+        self.spider.fetch = lambda url, headers: types.SimpleNamespace(text='''
+        <meta property="og:title" content="Solo">
+        <a href="/watch?v=999">Related video</a>
+        <source src="https://hanime1.me/videos/123-480.mp4" type="video/mp4" size="480">
+        ''')
+        vod = self.spider.detailContent(['123'])['list'][0]
+        self.assertEqual(vod['vod_play_url'], 'Solo$https://hanime1.me/videos/123-480.mp4')
+
+    def test_legacy_playlist_and_missing_stream(self):
+        self.spider.fetch = lambda url, headers: types.SimpleNamespace(text='''
+        <meta property="og:title" content="Current">
+        <div class="video-playlist-wrapper"><div class="related-watch-wrap">
+          <a href="/watch?v=456"><img alt="Legacy episode"></a>
+        </div></div>
+        ''')
+        vod = self.spider.detailContent(['123'])['list'][0]
+        self.assertEqual(vod['vod_play_url'], 'Legacy episode$hanime1:456#Current$hanime1:123')
+        self.assertEqual(self.spider.playerContent('Hanime1', 'hanime1:456', [])['url'], '')
 
     def test_rejects_invalid_detail_id(self):
         self.assertEqual(self.spider.detailContent(['not-an-id']), {'list': []})
         self.assertEqual(self.urls, [])
         self.assertEqual(self.spider.playerContent('Hanime1', 'http://example.com/video.mp4', [])['url'], '')
+        self.assertEqual(self.spider.playerContent('Hanime1', 'hanime1:abc', [])['url'], '')
 
     def test_card_title_falls_back_to_image_alt(self):
         parser = PageParser()
