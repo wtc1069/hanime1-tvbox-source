@@ -30,12 +30,13 @@ function documentWith(selectors = {}, collections = {}, title = 'Hanime1', html 
     };
 }
 
-function run(method, document) {
+function run(method, document, resources = []) {
     let result;
     const context = vm.createContext({
         document,
         location: {href: 'https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA'},
         window: {},
+        performance: {getEntriesByType: () => resources.map(name => ({name}))},
         setTimeout: () => { throw new Error('unexpected wait'); },
         GmSpiderInject: {
             GetSpiderArgs: () => JSON.stringify([method, ['123']]),
@@ -51,6 +52,7 @@ test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.equal(site.api, 'csp_GM');
     assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar$/);
     assert.match(site.ext.userScript, /\/vendor\/hanime1\/js\/hanime1\.user\.js\?v=[a-f0-9]+$/);
+    assert.equal(site.ext.playUrlMatch, undefined);
     for (const entry of Object.values(site.ext.spider)) {
         assert.match(entry.loadUrl, /^https:\/\/hanime1\.me\//);
     }
@@ -99,7 +101,9 @@ test('detail returns playlist identifiers and player chooses the highest source'
         name: 'Second episode', type: 'webview', ext: {replace: {vod_id: '456'}}
     });
     const playerResult = run('playerContent', detail);
-    assert.equal(playerResult.type, 'match');
+    assert.equal(playerResult.url, 'https://hanime1.me/videos/123-1080.mp4');
+    assert.equal(playerResult.header.Referer, 'https://hanime1.me/');
+    assert.equal(playerResult.header.Range, undefined);
 });
 
 test('detail does not wait for a dynamically loaded video source', () => {
@@ -111,12 +115,14 @@ test('detail does not wait for a dynamically loaded video source', () => {
     assert.equal(result.list[0].vod_id, '123');
 });
 
-test('player uses network matching when the site exposes a dynamic video source', () => {
-    const video = element({}, '', {});
-    video.currentSrc = 'https://hanime1.me/videos/123-1080.m3u8';
-    const document = documentWith({}, {'video': [video]});
-    const result = run('playerContent', document);
-    assert.equal(result.type, 'match');
+test('player uses the latest dynamic media resource without forwarding Range', () => {
+    const result = run('playerContent', documentWith(), [
+        'https://cdn.dreamserve.dev/video/older.mp4',
+        'https://cdn.dreamserve.dev/video/current.mp4'
+    ]);
+    assert.equal(result.url, 'https://cdn.dreamserve.dev/video/current.mp4');
+    assert.equal(result.header.Referer, 'https://hanime1.me/');
+    assert.equal(result.header.Range, undefined);
 });
 
 test('challenge page returns URL for the generic App verification flow', () => {

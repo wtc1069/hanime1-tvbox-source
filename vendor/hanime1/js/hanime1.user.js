@@ -144,6 +144,22 @@
         return url;
     }
 
+    function resourceSource() {
+        if (typeof performance === 'undefined' || !performance.getEntriesByType) return '';
+        var entries = performance.getEntriesByType('resource') || [];
+        for (var i = entries.length - 1; i >= 0; i--) {
+            var url = entries[i] && entries[i].name || '';
+            if (/^https:\/\/(?:vdownload\.hembed\.com\/[^?#]+|cdn\.dreamserve\.dev\/video\/[^?#]+)\.(?:mp4|m3u8)(?:[?#]|$)/i.test(url)) {
+                return url;
+            }
+        }
+        return '';
+    }
+
+    function playbackSource() {
+        return resourceSource() || bestSource();
+    }
+
     function playbackHeaders() {
         var headers = {
             'User-Agent': browserUserAgent,
@@ -238,9 +254,15 @@
         },
 
         playerContent: function () {
-            // The site creates the media request dynamically. Let the GM JAR
-            // capture the matching request instead of reading a blob URL.
-            return {type: 'match'};
+            var url = playbackSource();
+            if (!url) return null;
+            // Do not forward the WebView's Range header. It can point into the
+            // middle of an MP4 and makes external players reject the stream.
+            return {
+                parse: 0,
+                url: url,
+                header: playbackHeaders()
+            };
         },
 
         searchContent: function (key, quick, pg) {
@@ -259,8 +281,20 @@
             return;
         }
         if (args.name === 'playerContent') {
-            if (isChallengePage()) send({__tvbox_challenge_url: location.href});
-            else send(spider[args.name].apply(null, args.values));
+            var tries = 0;
+            var waitForPlayback = function () {
+                if (isChallengePage()) {
+                    send({__tvbox_challenge_url: location.href});
+                    return;
+                }
+                var result = spider.playerContent();
+                if (result || ++tries >= 30) {
+                    send(result || {});
+                } else {
+                    setTimeout(waitForPlayback, 400);
+                }
+            };
+            waitForPlayback();
             return;
         }
         send(spider[args.name].apply(null, args.values));
