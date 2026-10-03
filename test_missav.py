@@ -1,6 +1,8 @@
+import json
 import sys
 import types
 import unittest
+from unittest.mock import patch
 
 base = types.ModuleType('base')
 base.spider = types.ModuleType('base.spider')
@@ -8,6 +10,7 @@ base.spider.Spider = type('Spider', (), {})
 sys.modules.setdefault('base', base)
 sys.modules.setdefault('base.spider', base.spider)
 
+import missav_direct
 from missav_direct import HOST, MissavParser, Spider, video_id, video_source
 
 
@@ -95,6 +98,28 @@ class MissavTests(unittest.TestCase):
 
         self.spider.fetch = rejected
         self.assertEqual(self.spider.homeVideoContent(), {'list': []})
+
+    def test_android_bridge_is_first_request(self):
+        calls = []
+
+        def request(method, url, headers, body, redirects):
+            calls.append((method, url, headers, body, redirects))
+            return json.dumps({'status_code': 200, 'text': LIST_HTML})
+
+        self.spider.fetch = lambda *args, **kwargs: self.fail('Python direct fetch used')
+        with patch.object(missav_direct, 'PythonHttp', types.SimpleNamespace(request=request)):
+            self.assertEqual(self.spider.homeVideoContent()['list'][0]['vod_id'], 'abc-123')
+        self.assertEqual(calls[0][0:2], ('GET', HOST + '/cn/new'))
+        self.assertTrue(calls[0][4])
+
+    def test_android_bridge_error_does_not_retry_direct(self):
+        self.spider.fetch = lambda *args, **kwargs: self.fail('Python direct fetch used')
+        bridge = types.SimpleNamespace(request=lambda *args: '{"error": "proxy unavailable"}')
+        with patch.object(missav_direct, 'PythonHttp', bridge):
+            self.assertEqual(self.spider.homeVideoContent(), {'list': []})
+        bridge = types.SimpleNamespace(request=lambda *args: '{"status_code": 403, "text": "challenge"}')
+        with patch.object(missav_direct, 'PythonHttp', bridge):
+            self.assertEqual(self.spider.homeVideoContent(), {'list': []})
 
 
 if __name__ == '__main__':

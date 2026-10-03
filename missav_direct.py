@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 import html
 from html.parser import HTMLParser
+import json
 import re
 import sys
 from urllib.parse import quote, urljoin, urlparse
 
 sys.path.append('..')
 from base.spider import Spider as BaseSpider
+
+try:
+    from com.undcover.freedom.pyramid import PythonHttp
+except ImportError:
+    PythonHttp = None
 
 
 HOST = 'https://missav.ws'
@@ -119,9 +125,19 @@ class Spider(BaseSpider):
 
     def _page(self, path):
         try:
-            response = self.fetch(HOST + path, headers=self.headers, timeout=20)
-            response.raise_for_status()
-            page = response.text
+            url = HOST + path
+            if PythonHttp is not None:
+                result = json.loads(str(PythonHttp.request(
+                    'GET', url, json.dumps(self.headers), '', True)))
+                if result.get('error'):
+                    raise RuntimeError(result['error'])
+                if result.get('status_code') != 200:
+                    raise RuntimeError('HTTP {}'.format(result.get('status_code')))
+                page = result.get('text', '')
+            else:
+                response = self.fetch(url, headers=self.headers, timeout=20)
+                response.raise_for_status()
+                page = response.text
         except Exception as exc:
             print('MissAV request failed for {}: {}'.format(path, exc), file=sys.stderr)
             page = ''
