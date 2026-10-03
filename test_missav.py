@@ -121,6 +121,17 @@ class MissavTests(unittest.TestCase):
         with patch.object(missav_direct, 'PythonHttp', bridge):
             self.assertEqual(self.spider.homeVideoContent(), {'list': []})
 
+    def test_early_hints_use_browser_page(self):
+        urls = []
+        bridge = types.SimpleNamespace(
+            request=lambda *args: '{"status_code": 103}',
+            browserGet=lambda url: (urls.append(url) or json.dumps({
+                'status_code': 200, 'text': LIST_HTML})))
+        self.spider.fetch = lambda *args, **kwargs: self.fail('Python direct fetch used')
+        with patch.object(missav_direct, 'PythonHttp', bridge):
+            self.assertEqual(self.spider.homeVideoContent()['list'][0]['vod_id'], 'abc-123')
+        self.assertEqual(urls, [HOST + '/cn/new'])
+
 
 if __name__ == '__main__':
     unittest.main()

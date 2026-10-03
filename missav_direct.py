@@ -129,6 +129,8 @@ class Spider(BaseSpider):
             if PythonHttp is not None:
                 result = json.loads(str(PythonHttp.request(
                     'GET', url, json.dumps(self.headers), '', True)))
+                if result.get('status_code') == 103:
+                    result = json.loads(str(PythonHttp.browserGet(url)))
                 if result.get('error'):
                     raise RuntimeError(result['error'])
                 if result.get('status_code') != 200:
