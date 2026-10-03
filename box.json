@@ -10,6 +10,38 @@
       "filterable": 0
     },
     {
+      "key": "Hanime1",
+      "name": "Hanime1 原站 (JS)",
+      "type": 3,
+      "api": "csp_GM",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
+      "ext": {
+        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/hanime1/js/hanime1.user.js",
+        "debug": false,
+        "webViewSettings": {
+          "blockNetworkImage": true,
+          "blockList": [
+            "*.ico",
+            "https://*.cloudflareinsights.com/*",
+            "https://*.googletagmanager.com/*"
+          ]
+        },
+        "spider": {
+          "homeContent": {"loadUrl": "https://hanime1.me/search?genre=%E8%A3%8F%E7%95%AA&sort=%E6%9C%80%E6%96%B0%E4%B8%8A%E5%B8%82"},
+          "categoryContent": {"loadUrl": "https://hanime1.me/search?${tid}&page=${pg:-1}${sort:-}"},
+          "detailContent": {"loadUrl": "https://hanime1.me/watch?v=${id}"},
+          "playerContent": {"loadUrl": "https://hanime1.me/watch?v=${vod_id}"},
+          "searchContent": {"loadUrl": "https://hanime1.me/search?query=${key}&genre=%E8%A3%8F%E7%95%AA&page=${pg:-1}"}
+        }
+      },
+      "timeout": 90,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 0,
+      "filterable": 1,
+      "style": {"type": "rect", "ratio": 1.49}
+    },
+    {
       "key": "MissAV",
       "name": "MissAV (JS)",
       "type": 3,
