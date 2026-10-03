@@ -8,6 +8,8 @@ const root = path.join(__dirname, '..');
 const script = fs.readFileSync(path.join(root, 'vendor/hanime1/js/hanime1.user.js'), 'utf8');
 const site = JSON.parse(fs.readFileSync(path.join(root, 'box.json'), 'utf8'))
     .sites.find(item => item.key === 'Hanime1');
+const pythonSite = JSON.parse(fs.readFileSync(path.join(root, 'box.json'), 'utf8'))
+    .sites.find(item => item.key === 'hanime1_direct.py');
 
 function element(attributes = {}, content = '', selectors = {}) {
     return {
@@ -55,6 +57,7 @@ function run(method, document, globals = {}) {
 
 test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.equal(site.api, 'csp_GM');
+    assert.equal(site.style, pythonSite.style);
     assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar\?v=[a-f0-9]+$/);
     assert.match(site.ext.userScript, /\/vendor\/hanime1\/js\/hanime1\.user\.js\?v=[a-f0-9]+$/);
     assert.match(script, /@run-at\s+document-start/);
