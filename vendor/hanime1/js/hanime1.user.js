@@ -56,34 +56,6 @@
         return name + '=' + encodeURIComponent(value);
     }
 
-    // csp_GM expects each non-direct play item to be a base64 encoded
-    // PlayMedium object. The GM JAR uses its replace map to build the page URL.
-    function base64Encode(value) {
-        if (typeof btoa === 'function') return btoa(value);
-        var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-        var output = '';
-        for (var i = 0; i < value.length; i += 3) {
-            var a = value.charCodeAt(i);
-            var hasB = i + 1 < value.length;
-            var hasC = i + 2 < value.length;
-            var b = hasB ? value.charCodeAt(i + 1) : 0;
-            var c = hasC ? value.charCodeAt(i + 2) : 0;
-            output += alphabet.charAt(a >> 2);
-            output += alphabet.charAt(((a & 3) << 4) | (b >> 4));
-            output += hasB ? alphabet.charAt(((b & 15) << 2) | (c >> 6)) : '=';
-            output += hasC ? alphabet.charAt(c & 63) : '=';
-        }
-        return output;
-    }
-
-    function playTarget(id) {
-        return base64Encode(JSON.stringify({
-            name: 'Play',
-            type: 'webview',
-            ext: {replace: {vod_id: String(id)}}
-        }));
-    }
-
     function cardFrom(node) {
         var link = one(node, 'a[href*="/watch"]') || (attr(node, 'href').indexOf('/watch') >= 0 ? node : null);
         var id = watchId(attr(link, 'href'));
@@ -247,9 +219,13 @@
             if (!/^\d+$/.test(id)) return {list: []};
             var title = meta('og:title') || text(one(document, 'h1')) || id;
             var entries = playlist(id, title);
-            var play = [];
+            var media = [];
             for (var i = 0; i < entries.length; i++) {
-                play.push(cleanName(entries[i].name, entries[i].id) + '$' + playTarget(entries[i].id));
+                media.push({
+                    name: cleanName(entries[i].name, entries[i].id),
+                    type: 'webview',
+                    ext: {replace: {vod_id: String(entries[i].id)}}
+                });
             }
             return {list: [{
                 vod_id: id,
@@ -257,7 +233,7 @@
                 vod_pic: meta('og:image'),
                 vod_content: meta('og:description'),
                 vod_play_from: 'Hanime1',
-                vod_play_url: play.join('#')
+                vod_play_data: [{from: 'Hanime1', media: media}]
             }]};
         },
 

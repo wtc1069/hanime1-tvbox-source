@@ -47,10 +47,6 @@ function run(method, document) {
     return result;
 }
 
-function decodePlayTarget(value) {
-    return JSON.parse(Buffer.from(value, 'base64').toString('utf8'));
-}
-
 test('configuration uses the GM runtime and only hanime1.me endpoints', () => {
     assert.equal(site.api, 'csp_GM');
     assert.match(site.jar, /\/vendor\/cluntop\/jar\/gm\.jar$/);
@@ -97,10 +93,10 @@ test('detail returns playlist identifiers and player chooses the highest source'
         ],
     });
     const detailResult = run('detailContent', detail);
-    const playItems = detailResult.list[0].vod_play_url.split('#');
-    assert.equal(playItems.map(item => item.split('$')[0]).join('#'), 'Second episode#Current episode');
-    assert.deepEqual(decodePlayTarget(playItems[0].split('$')[1]), {
-        name: 'Play', type: 'webview', ext: {replace: {vod_id: '456'}}
+    const media = detailResult.list[0].vod_play_data[0].media;
+    assert.equal(media.map(item => item.name).join('#'), 'Second episode#Current episode');
+    assert.deepEqual(media[0], {
+        name: 'Second episode', type: 'webview', ext: {replace: {vod_id: '456'}}
     });
     const playerResult = run('playerContent', detail);
     assert.equal(playerResult.url, 'https://hanime1.me/videos/123-1080.mp4');
