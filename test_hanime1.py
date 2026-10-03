@@ -9,7 +9,7 @@ base.spider.Spider = type('Spider', (), {})
 sys.modules.setdefault('base', base)
 sys.modules.setdefault('base.spider', base.spider)
 
-from hanime1_direct import HOST, Spider
+from hanime1_direct import HOST, PageParser, Spider
 
 
 LIST_HTML = '''
@@ -72,6 +72,13 @@ class SpiderTests(unittest.TestCase):
         self.assertEqual(self.spider.detailContent(['not-an-id']), {'list': []})
         self.assertEqual(self.urls, [])
         self.assertEqual(self.spider.playerContent('Hanime1', 'http://example.com/video.mp4', [])['url'], '')
+
+    def test_card_title_falls_back_to_image_alt(self):
+        parser = PageParser()
+        parser.feed('<a href="/watch?v=456"><img data-src="/cover.jpg" alt="Fallback title"></a>')
+        self.assertEqual(parser.videos, [{
+            'vod_id': '456', 'vod_name': 'Fallback title', 'vod_pic': '/cover.jpg'
+        }])
 
 
 if __name__ == '__main__':

@@ -41,14 +41,15 @@ class PageParser(HTMLParser):
             query = parse_qs(urlparse(attrs.get('href', '')).query)
             vid = query.get('v', [''])[0]
             if '/watch' in attrs.get('href', '') and vid.isdigit():
-                self.card = {'vod_id': vid, 'vod_name': '', 'vod_pic': ''}
+                self.card = {'vod_id': vid, 'vod_name': '', 'vod_pic': '', 'fallback_name': attrs.get('title', '')}
                 self.depth = 1
                 return
         if self.card is not None:
             if tag == 'a':
                 self.depth += 1
             if tag == 'img' and not self.card['vod_pic']:
-                self.card['vod_pic'] = attrs.get('src', '') or attrs.get('data-src', '')
+                self.card['vod_pic'] = attrs.get('src', '') or attrs.get('data-src', '') or attrs.get('data-original', '')
+                self.card['fallback_name'] = self.card['fallback_name'] or attrs.get('alt', '')
             if 'home-rows-videos-title' in classes or 'card-mobile-title' in classes:
                 self.title_depth = 1
             elif self.title_depth is not None and tag not in ('img', 'br', 'source'):
@@ -68,8 +69,9 @@ class PageParser(HTMLParser):
         if tag == 'a':
             self.depth -= 1
             if self.depth == 0:
-                self.card['vod_name'] = self.card['vod_name'].strip()
+                self.card['vod_name'] = (self.card['vod_name'].strip() or self.card['fallback_name']).strip()
                 if self.card['vod_name']:
+                    del self.card['fallback_name']
                     self.videos.append(self.card)
                 self.card = None
                 self.title_depth = None
