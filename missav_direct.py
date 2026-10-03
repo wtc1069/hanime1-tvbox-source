@@ -26,6 +26,7 @@ CHANNELS = (
 SLUG = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{2,}\Z')
 MEDIA = re.compile(r'https?://[^\s"\'<>]+?\.(?:m3u8|mp4)(?:\?[^\s"\'<>]*)?', re.I)
 UUID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', re.I)
+PREVIEW = re.compile(r'(?:preview|trailer|teaser|sample|thumbnail|/shorts?/)', re.I)
 NON_VIDEOS = {'new', 'release', 'search', 'genres', 'actresses', 'actors',
               'makers', 'directors', 'labels', 'fc2', 'today-hot', 'weekly-hot',
               'monthly-hot', 'chinese-subtitle', 'uncensored-leak'}
@@ -105,15 +106,25 @@ class MissavParser(HTMLParser):
 
 def video_source(page, sources):
     text = html.unescape(page).replace('\\/', '/')
-    for source in sources + MEDIA.findall(text):
-        url = urljoin(HOST, html.unescape(source).replace('\\/', '/'))
-        if urlparse(url).scheme == 'https' and MEDIA.match(url):
-            return url
     match = re.search(r'surrit\.com/(' + UUID.pattern + r')', text, re.I)
     if match:
         return 'https://surrit.com/{}/playlist.m3u8'.format(match.group(1))
+    # The packed player script stores the UUID backwards between m3u8| and |com|surrit.
+    for match in re.finditer(r'm3u8\|([0-9a-f|]+)\|com\|surrit', text, re.I):
+        candidate = '-'.join(reversed(match.group(1).split('|')))
+        if UUID.fullmatch(candidate):
+            return 'https://surrit.com/{}/playlist.m3u8'.format(candidate)
     match = re.search(r'["\']uuid["\']\s*[:=]\s*["\'](' + UUID.pattern + r')["\']', text, re.I)
-    return ('https://surrit.com/{}/playlist.m3u8'.format(match.group(1)) if match else '')
+    if match:
+        return 'https://surrit.com/{}/playlist.m3u8'.format(match.group(1))
+    for source in sources + MEDIA.findall(text):
+        url = urljoin(HOST, html.unescape(source).replace('\\/', '/'))
+        parsed = urlparse(url)
+        if (parsed.scheme == 'https' and MEDIA.match(url)
+                and parsed.path.lower().endswith('.m3u8')
+                and not PREVIEW.search(parsed.path)):
+            return url
+    return ''
 
 
 class Spider(BaseSpider):

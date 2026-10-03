@@ -78,6 +78,24 @@ class MissavTests(unittest.TestCase):
                          'https://surrit.com/{}/playlist.m3u8'.format(uuid))
         self.assertEqual(video_source('<p>No video</p>', []), '')
 
+    def test_preview_never_shadows_full_video(self):
+        uuid = '12345678-1234-1234-1234-123456789abc'
+        preview = 'https://media.example/preview.mp4'
+        full = 'https://surrit.com/{}/playlist.m3u8'.format(uuid)
+        page = '<video src="{}"></video><script>"uuid":"{}"</script>'.format(preview, uuid)
+        self.assertEqual(video_source(page, [preview]), full)
+        packed = '|'.join(reversed(uuid.split('-')))
+        self.assertEqual(video_source('<script>m3u8|{}|com|surrit</script>'.format(packed),
+                                      [preview]), full)
+        self.assertEqual(video_source('<video src="{}"></video>'.format(preview), [preview]), '')
+
+    def test_full_hls_precedes_previews(self):
+        trailer = 'https://media.example/preview/playlist.m3u8'
+        full = 'https://media.example/full/playlist.m3u8?token=abc'
+        page = '<video src="{}"></video><source src="{}">'.format(trailer, full)
+        self.assertEqual(video_source(page, [trailer, full]), full)
+        self.assertEqual(video_source('<video src="https://media.example/trailer.mp4">', []), '')
+
     def test_parser_ignores_challenge_page(self):
         parser = MissavParser()
         parser.feed('<title>Just a moment...</title><div>Cloudflare</div>')
