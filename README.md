@@ -10,6 +10,8 @@ https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/box.json
 
 MissAV 基于 [cluntop/tvbox 的 GM/WebView 规则](https://github.com/cluntop/tvbox)；本站只访问 `https://missav.ws/`。`vendor/cluntop/` 保存上游 MIT 许可的 `gm.jar` 和修改后的 `missav.user.js`，并托管 jQuery 3.7.1 slim 及其 MIT 许可文件；配置不再依赖 clun.top 的运行文件。上游版本为 `f94c8994b0ce0b6bdad8cd1d2a9b5ac54f677f87`。定制脚本兼容旧版 WebView（不用 `Array.at()`），详情页等待播放器提供 HLS 地址，超时不返回预告链接。JAR 是会在 App 内执行的第三方代码；旧的 `missav_direct.py` 仅保留供回退。MissAV 的实际播放仍需设备实测。
 
+MissAV 分类或详情碰到 Cloudflare 验证时，脚本会返回验证标记。配套的 [定制 TVBox](https://github.com/wtc1069/TVBoxOSC-Hanime1) 会打开同域网页供用户验证，然后重新请求一次；旧版 App 无法处理此标记。清空 App 数据也会清空站点验证状态，首次访问需要重新验证。验证能否通过取决于设备网络和站点策略。
+
 详情页的选集按原站播放清单显示视频标题，不再列出画质。当前视频使用页面中最高画质的播放地址；其他选集在点击时读取对应页面，选择最高画质。清单不存在时仅显示当前视频。点选其他选集仍需访问 `hanime1.me`，如果验证状态未复用或原站拦截，请求可能失败或较慢。
 
 分类页支持排序筛选，并兼容原站 `video-item-container` 卡片的标题和时长字段；排行榜不附加分类参数。

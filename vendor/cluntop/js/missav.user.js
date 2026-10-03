@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissAV
 // @namespace    gmspider
-// @version      2024.12.03-tvbox.1
+// @version      2024.12.03-tvbox.2
 // @description  MissAV GMSpider
 // @author       Luomo
 // @match        https://missav.*/*
@@ -269,29 +269,41 @@ console.log(JSON.stringify(GM_info));
         }
     }
 
+    function isChallengePage() {
+        const title = (document.title || '').toLowerCase();
+        if (/just a moment|attention required|verify you are human|checking your browser/.test(title)) return true;
+        if (document.querySelector('#cf-wrapper, #cf-challenge-running, #cf-browser-verification, #challenge-form')) return true;
+        if (typeof window._cf_chl_opt !== 'undefined') return true;
+        const html = document.documentElement.outerHTML.toLowerCase();
+        const text = document.body ? document.body.innerText.toLowerCase() : '';
+        return html.indexOf('/cdn-cgi/challenge-platform/') >= 0 &&
+            /verify you are human|checking your browser|checking if the site connection is secure/.test(text);
+    }
+
     $(document).ready(function () {
         let result = "";
-        if ($("#cf-wrapper").length > 0) {
-            console.log("源站不可用:" + $('title').text());
-            GM_toastLong("源站不可用:" + $('title').text());
-        } else {
-            if (GMSpiderArgs.fName === 'detailContent') {
-                let tries = 0;
-                const waitForPlayer = function () {
-                    if (playbackUrl()) {
-                        sendResult(GmSpider.detailContent(...GMSpiderArgs.fArgs));
-                    } else if (++tries < 60) {
-                        setTimeout(waitForPlayer, 500);
-                    } else {
-                        console.warn('MissAV player did not expose a full HLS URL');
-                        sendResult({list: []});
-                    }
-                };
-                waitForPlayer();
-                return;
-            }
-            result = GmSpider[GMSpiderArgs.fName](...GMSpiderArgs.fArgs);
+        if (isChallengePage()) {
+            sendResult({__tvbox_challenge_url: location.href});
+            return;
         }
+        if (GMSpiderArgs.fName === 'detailContent') {
+            let tries = 0;
+            const waitForPlayer = function () {
+                if (isChallengePage()) {
+                    sendResult({__tvbox_challenge_url: location.href});
+                } else if (playbackUrl()) {
+                    sendResult(GmSpider.detailContent(...GMSpiderArgs.fArgs));
+                } else if (++tries < 60) {
+                    setTimeout(waitForPlayer, 500);
+                } else {
+                    console.warn('MissAV player did not expose a full HLS URL');
+                    sendResult({list: []});
+                }
+            };
+            waitForPlayer();
+            return;
+        }
+        result = GmSpider[GMSpiderArgs.fName](...GMSpiderArgs.fArgs);
         console.log(result);
         sendResult(result);
     });
