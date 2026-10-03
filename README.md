@@ -12,6 +12,8 @@ MissAV 基于 [cluntop/tvbox 的 GM/WebView 规则](https://github.com/cluntop/t
 
 MissAV 分类或详情碰到 Cloudflare 验证时，脚本会返回验证标记。配套的 [定制 TVBox](https://github.com/wtc1069/TVBoxOSC-Hanime1) 会打开同域网页供用户验证，然后重新请求一次；旧版 App 无法处理此标记。清空 App 数据也会清空站点验证状态，首次访问需要重新验证。验证能否通过取决于设备网络和站点策略。
 
+123AV 使用 [cluntop/tvbox 的 GM 规则](https://github.com/cluntop/tvbox/blob/main/js/123av.user.js)，复用上述 `gm.jar` 和本仓库的 jQuery。`vendor/cluntop/js/123av.user.js` 基于上游 `df5c43052a9936b44222f93e9cc1893026b0cca0`，已按目前站点的 `/en/` 路由、列表卡片和详情字段更新，兼容旧版 WebView，并对验证页返回同一通用标记。播放沿用上游 WebView 匹配方式；实际播放效果仍需设备验证。
+
 详情页的选集按原站播放清单显示视频标题，不再列出画质。当前视频使用页面中最高画质的播放地址；其他选集在点击时读取对应页面，选择最高画质。清单不存在时仅显示当前视频。点选其他选集仍需访问 `hanime1.me`，如果验证状态未复用或原站拦截，请求可能失败或较慢。
 
 分类页支持排序筛选，并兼容原站 `video-item-container` 卡片的标题和时长字段；排行榜不附加分类参数。

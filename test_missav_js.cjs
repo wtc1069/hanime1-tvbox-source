@@ -7,7 +7,12 @@ const script = fs.readFileSync('vendor/cluntop/js/missav.user.js', 'utf8');
 function runDetail(readyAfter) {
     const calls = [];
     const timers = [];
-    const document = {};
+    const document = {
+        title: 'MissAV',
+        querySelector: () => null,
+        documentElement: {outerHTML: '<html></html>'},
+        body: {innerText: ''}
+    };
     const jquery = value => ({
         length: 0,
         ready(callback) { callback(); },

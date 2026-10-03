@@ -50,6 +50,42 @@
       "changeable": 0,
       "filterable": 1,
       "style": {"type": "rect", "ratio": 1.49}
+    },
+    {
+      "key": "123av",
+      "name": "123AV (JS)",
+      "type": 3,
+      "api": "csp_GM",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
+      "ext": {
+        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/js/123av.user.js",
+        "debug": false,
+        "webViewSettings": {
+          "blockNetworkImage": true,
+          "blockList": [
+            "*.ico", "*.png", "*.jpg", "*.vtt", "*.css*",
+            "https://*.googleapis.com/*",
+            "https://*.googletagmanager.com/*",
+            "https://*.recombee.com/*",
+            "https://*.google-analytics.com/*",
+            "https://njav.tv/recomm/items/*"
+          ]
+        },
+        "playUrlMatch": ["https://*/v.m3u8"],
+        "spider": {
+          "homeContent": {"loadUrl": "https://123av.com/en/new"},
+          "categoryContent": {"loadUrl": "https://123av.com/en/${tid}?page=${pg:-1}${filter:-}${sort:-}"},
+          "detailContent": {"loadUrl": "https://123av.com/en/v/${id}"},
+          "playerContent": {"loadUrl": "https://123av.com/en/v/${vod_id}"},
+          "searchContent": {"loadUrl": "https://123av.com/en/search?keyword=${key}&page=${pg:-1}"}
+        }
+      },
+      "timeout": 60,
+      "searchable": 1,
+      "quickSearch": 1,
+      "changeable": 0,
+      "filterable": 1,
+      "style": {"type": "rect", "ratio": 1.49}
     }
   ]
 }
