@@ -14,9 +14,9 @@
       "name": "MissAV (JS)",
       "type": 3,
       "api": "csp_GM",
-      "jar": "https://clun.top/jar/gm.jar",
+      "jar": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/jar/gm.jar",
       "ext": {
-        "userScript": "https://clun.top/js/missav.user.js",
+        "userScript": "https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/js/missav.user.js",
         "debug": false,
         "webViewSettings": {
           "blockNetworkImage": true,

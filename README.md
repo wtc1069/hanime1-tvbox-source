@@ -8,7 +8,7 @@ https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/box.json
 
 本规则只请求 `https://hanime1.me`，不使用镜像或回退地址。原站从验证环境返回 HTTP 403，因此目前**无法验证原站的列表、详情和播放**；如果你的设备也被拦截，分类仍会为空。视频地址可能由站点签名且会过期，播放失败时请重新打开详情页获取新地址。请仅在有权访问相关内容的情况下使用。
 
-MissAV 已改为 [clun.top 的 GM/WebView 规则](https://clun.top/fun.json)：站点只加载 `https://missav.ws/`，由远程 `gm.jar` 执行 `missav.user.js`，详情页从浏览器运行时的 `hls.url` 获取播放地址。JAR 和脚本由第三方维护并在 App 内执行，更新或失效不受本仓库控制；仅在信任该提供方时使用。旧的 `missav_direct.py` 保留在仓库供排查或回退，但不再出现在导入配置中。MissAV 的实际播放仍需设备实测。
+MissAV 基于 [cluntop/tvbox 的 GM/WebView 规则](https://github.com/cluntop/tvbox)；本站只访问 `https://missav.ws/`。`vendor/cluntop/` 保存上游 MIT 许可的 `gm.jar` 和修改后的 `missav.user.js`，并托管 jQuery 3.7.1 slim 及其 MIT 许可文件；配置不再依赖 clun.top 的运行文件。上游版本为 `f94c8994b0ce0b6bdad8cd1d2a9b5ac54f677f87`。定制脚本兼容旧版 WebView（不用 `Array.at()`），详情页等待播放器提供 HLS 地址，超时不返回预告链接。JAR 是会在 App 内执行的第三方代码；旧的 `missav_direct.py` 仅保留供回退。MissAV 的实际播放仍需设备实测。
 
 详情页的选集按原站播放清单显示视频标题，不再列出画质。当前视频使用页面中最高画质的播放地址；其他选集在点击时读取对应页面，选择最高画质。清单不存在时仅显示当前视频。点选其他选集仍需访问 `hanime1.me`，如果验证状态未复用或原站拦截，请求可能失败或较慢。
 
