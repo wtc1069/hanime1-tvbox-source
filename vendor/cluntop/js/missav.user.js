@@ -4,7 +4,7 @@
 // @version      2024.12.03-tvbox.2
 // @description  MissAV GMSpider
 // @author       Luomo
-// @match        https://missav.*/*
+// @match        https://missav123.com/*
 // @require      https://raw.githubusercontent.com/wtc1069/hanime1-tvbox-source/main/vendor/cluntop/js/jquery-3.7.1.slim.min.js
 // @grant        unsafeWindow
 // ==/UserScript==

@@ -15,7 +15,7 @@ from missav_direct import HOST, MissavParser, Spider, video_id, video_source
 
 
 LIST_HTML = '''
-<div class="thumbnail group"><div class="relative"><a href="https://missav.ai/cn/abc-123">
+<div class="thumbnail group"><div class="relative"><a href="https://missav123.com/cn/abc-123">
   <video data-src="https://media.example/preview.mp4"></video>
   <img data-src="/cover.jpg" alt="Fallback"></a>
   <a href="/cn/abc-123"><span class="absolute bottom-1">1:01:55</span></a></div>
@@ -47,7 +47,7 @@ class MissavTests(unittest.TestCase):
 
     def test_list_and_categories(self):
         self.assertEqual(video_id('https://other.example/cn/abc-123'), '')
-        self.assertEqual(video_id('https://missav.ai/cn/abc-123'), 'abc-123')
+        self.assertEqual(video_id('https://missav123.com/cn/abc-123'), 'abc-123')
         self.assertEqual(video_id('/cn/new'), '')
         result = self.spider.categoryContent('new', '2', False, {})
         self.assertEqual(self.urls[-1], HOST + '/cn/new?page=2')

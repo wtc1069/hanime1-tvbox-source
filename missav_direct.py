@@ -15,7 +15,7 @@ except ImportError:
     PythonHttp = None
 
 
-HOST = 'https://missav.ai'
+HOST = 'https://missav123.com'
 USER_AGENT = ('Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
               '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')
 CHANNELS = (
@@ -34,7 +34,7 @@ NON_VIDEOS = {'new', 'release', 'search', 'genres', 'actresses', 'actors',
 
 def video_id(href):
     parsed = urlparse(href)
-    if parsed.netloc and parsed.netloc.lower() != 'missav.ai':
+    if parsed.netloc and parsed.netloc.lower() != 'missav123.com':
         return ''
     parts = parsed.path.strip('/').split('/')
     return (parts[1] if len(parts) == 2 and parts[0] == 'cn'
