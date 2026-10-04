@@ -5,6 +5,14 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const script = fs.readFileSync(path.join(__dirname, '../vendor/cluntop/js/missav.user.js'), 'utf8');
+const site = JSON.parse(fs.readFileSync(path.join(__dirname, '../box.json'), 'utf8'))
+    .sites.find(item => item.key === 'MissAV');
+
+test('configuration uses missav.ai for every page', () => {
+    for (const entry of Object.values(site.ext.spider)) {
+        assert.match(entry.loadUrl, /^https:\/\/missav\.ai\/cn\//);
+    }
+});
 
 function runPage(title, html, selectorMatch = false, bodyText = '', method = 'categoryContent') {
     let response;
@@ -25,7 +33,7 @@ function runPage(title, html, selectorMatch = false, bodyText = '', method = 'ca
             SetSpiderResult: json => { response = JSON.parse(json); },
         },
         document,
-        location: {href: 'https://missav.ws/cn/new?page=1'},
+        location: {href: 'https://missav.ai/cn/new?page=1'},
         window: {},
         $,
         console: {log: () => {}},
@@ -35,16 +43,16 @@ function runPage(title, html, selectorMatch = false, bodyText = '', method = 'ca
 
 test('challenge page returns URL for verification', () => {
     assert.equal(runPage('Just a moment...', '<html></html>')['__tvbox_challenge_url'],
-        'https://missav.ws/cn/new?page=1');
+        'https://missav.ai/cn/new?page=1');
     assert.equal(runPage('Verify you are human', '<html></html>')['__tvbox_challenge_url'],
-        'https://missav.ws/cn/new?page=1');
+        'https://missav.ai/cn/new?page=1');
     assert.equal(runPage('MissAV', '<html></html>', true)['__tvbox_challenge_url'],
-        'https://missav.ws/cn/new?page=1');
+        'https://missav.ai/cn/new?page=1');
     assert.equal(runPage('Just a moment...', '<html></html>', false, '', 'homeContent')['__tvbox_challenge_url'],
-        'https://missav.ws/cn/new?page=1');
+        'https://missav.ai/cn/new?page=1');
     assert.equal(runPage('MissAV', '<script src="/cdn-cgi/challenge-platform/a"></script>', false,
         'Checking if the site connection is secure')['__tvbox_challenge_url'],
-        'https://missav.ws/cn/new?page=1');
+        'https://missav.ai/cn/new?page=1');
 });
 
 test('ordinary page does not request verification', () => {

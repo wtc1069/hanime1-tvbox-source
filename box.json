@@ -79,10 +79,10 @@
           ]
         },
         "spider": {
-          "homeContent": {"loadUrl": "https://missav.ws/cn/"},
-          "categoryContent": {"loadUrl": "https://missav.ws/cn/${tid}?page=${pg:-1}${filter:-}${sort:-}"},
-          "detailContent": {"loadUrl": "https://missav.ws/cn/${id}"},
-          "searchContent": {"loadUrl": "https://missav.ws/cn/search/${key}?page=${pg:-1}"}
+          "homeContent": {"loadUrl": "https://missav.ai/cn/"},
+          "categoryContent": {"loadUrl": "https://missav.ai/cn/${tid}?page=${pg:-1}${filter:-}${sort:-}"},
+          "detailContent": {"loadUrl": "https://missav.ai/cn/${id}"},
+          "searchContent": {"loadUrl": "https://missav.ai/cn/search/${key}?page=${pg:-1}"}
         }
       },
       "timeout": 60,
